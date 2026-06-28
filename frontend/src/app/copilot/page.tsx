@@ -95,7 +95,7 @@ export default function CopilotPage() {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Maaf, saya tidak dapat terhubung ke server saat ini. Pastikan backend sudah berjalan di http://localhost:8000, lalu coba lagi. 🔌",
+        content: "Maaf, saya tidak dapat terhubung ke server saat ini. Silakan coba lagi nanti. 🔌",
         isError: true,
       }
       setMessages((prev) => [...prev, errorMsg])

@@ -99,7 +99,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center max-w-3xl mx-auto">
             <Badge variant="brand" className="mb-6 px-4 py-1.5 text-sm">
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              LKS 2026 AI EXHIBITION
+              LKS 2026 AI EXHIBITION;
             </Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-tight mb-6">
               Informasi yang Terang,
@@ -288,7 +288,7 @@ export default function HomePage() {
               <span className="font-bold">JERNIH</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Grand Final LKS Nasional AI Exhibition 2026 — Built with Responsible AI
+              LKS 2026 — Built with Responsible AI
             </p>
           </div>
         </div>

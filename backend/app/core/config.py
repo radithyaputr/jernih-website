@@ -27,6 +27,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://jernih.app",
+        "https://jernih-project.vercel.app",
+        "https://frontend-ivory-one-79j3n82yfs.vercel.app",
     ]
 
     model_config = {
