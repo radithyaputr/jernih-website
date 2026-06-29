@@ -1,22 +1,28 @@
-"""AI Service for JERNIH OS.
+"""JERNIH OS — Streamlit Frontend & Backend (All-in-One)"""
 
-This module handles AI-powered features including:
-- Civic Copilot analysis
-- Knowledge graph generation
-- Action plan creation
-- Policy simulation
-- Hoax detection
-- Trust scoring
-"""
-
-import json
+import streamlit as st
 import random
 import re
-from typing import Optional, Union
+import json
+import os
+import time
 from datetime import datetime
+from typing import Optional, Union
 from dataclasses import dataclass
-from app.services.gemini_service import analyze_with_ai
 
+# ─── Page Config ──────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="JERNIH OS",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ─── Constants ────────────────────────────────────────────────────────────────
+VERSION = "1.0.0"
+APP_NAME = "JERNIH OS"
+
+# ─── Data Structures ──────────────────────────────────────────────────────────
 @dataclass
 class Source:
     title: str
@@ -36,24 +42,21 @@ class CopilotResponse:
     session_id: str
     summary: str
     analysis: str
-    relevant_programs: list[dict]
-    required_documents: list[dict]
-    risk_factors: list[dict]
+    relevant_programs: list
+    required_documents: list
+    risk_factors: list
     timeline: dict
     action_plan: dict
     success_probability: float
     trust_score: TrustScore
-    sources: list[Source]
-
+    sources: list
 
 @dataclass
 class CasualResponse:
-    """Lightweight response for greetings and casual chat."""
     session_id: str
     message: str
 
-
-# Mock knowledge base (would be RAG-powered in production)
+# ─── Knowledge Base ───────────────────────────────────────────────────────────
 KNOWLEDGE_BASE = {
     "programs": {
         "pip": {
@@ -96,13 +99,14 @@ KNOWLEDGE_BASE = {
         "sktm": {"name": "SKTM", "issuer": "Kelurahan"},
     },
 }
+
 TOPIC_CATEGORIES = {
     "greeting": {
-        "keywords": ["halo", "hai", "hi", "hey", "pagi", "siang", "sore", "malam", "selamat pagi", "selamat siang", "selamat sore", "selamat malam", "halo", "apa kabar", "gimana kabar", "test", "tes", "coba", "hello", "hy", "assalamualaikum", "assalamu alaikum"],
+        "keywords": ["halo", "hai", "hi", "hey", "pagi", "siang", "sore", "malam", "selamat pagi", "selamat siang", "selamat sore", "selamat malam", "apa kabar", "gimana kabar", "test", "tes", "coba", "hello", "hy", "assalamualaikum", "assalamu alaikum"],
         "label": "Sapaan",
     },
     "kematian": {
-        "keywords": ["meninggal", "meninggal dunia", "wafat", "tiada", "meninggalnya", "almarhum", "almarhumah", "kematian", "meninggalkan", "ditinggal", "kepergian", "berduka", "meninggalnya"],
+        "keywords": ["meninggal", "meninggal dunia", "wafat", "tiada", "meninggalnya", "almarhum", "almarhumah", "kematian", "meninggalkan", "ditinggal", "kepergian", "berduka"],
         "label": "Pengurusan Akta Kematian & Waris",
     },
     "pendidikan": {
@@ -114,23 +118,23 @@ TOPIC_CATEGORIES = {
         "label": "Penggantian Dokumen Kependudukan",
     },
     "kesehatan": {
-        "keywords": ["bpjs", "kis", "kesehatan", "berobat", "rumah sakit", "puskesmas", "dokter", "sakit", "rumah sakit", "obat", "berobat", "rs", "faskes", "rujukan", "bpjs kesehatan", "jaminan kesehatan"],
+        "keywords": ["bpjs", "kis", "kesehatan", "berobat", "rumah sakit", "puskesmas", "dokter", "sakit", "obat", "rs", "faskes", "rujukan", "bpjs kesehatan", "jaminan kesehatan"],
         "label": "Layanan Kesehatan",
     },
     "bansos": {
-        "keywords": ["bansos", "bantuan", "sembako", "pkh", "bpnt", "miskin", "fakir", "keluarga miskin", "bantuan sosial", "bantuan pangan", "subsidi", "blt", "bantuan langsung", "PKH", "keluarga harapan"],
+        "keywords": ["bansos", "bantuan", "sembako", "pkh", "bpnt", "miskin", "fakir", "keluarga miskin", "bantuan sosial", "bantuan pangan", "subsidi", "blt", "bantuan langsung"],
         "label": "Bantuan Sosial",
     },
     "usaha": {
-        "keywords": ["usaha", "kerja", "umkm", "wirausaha", "modal", "bisnis", "wirausaha", "startup", "usaha kecil", "usaha mikro", "nib", "izin usaha", "pelatihan kerja", "lowongan", "pekerjaan", "kerja"],
+        "keywords": ["usaha", "kerja", "umkm", "wirausaha", "modal", "bisnis", "startup", "usaha kecil", "usaha mikro", "nib", "izin usaha", "pelatihan kerja", "lowongan", "pekerjaan"],
         "label": "Bantuan Usaha & Ketenagakerjaan",
     },
     "kk": {
-        "keywords": ["kartu keluarga", "kk", "kartu keluarga", "data keluarga", "anggota keluarga"],
+        "keywords": ["kartu keluarga", "kk", "data keluarga", "anggota keluarga"],
         "label": "Pengurusan Kartu Keluarga",
     },
     "akte": {
-        "keywords": ["akte", "akta kelahiran", "kelahiran", "lahir", "bayi", "anak", "kelahiran anak", "akta"],
+        "keywords": ["akte", "akta kelahiran", "kelahiran", "lahir", "bayi", "anak", "akta"],
         "label": "Pembuatan Akta Kelahiran",
     },
     "pajak": {
@@ -138,7 +142,7 @@ TOPIC_CATEGORIES = {
         "label": "Informasi Perpajakan",
     },
     "nikah": {
-        "keywords": ["nikah", "menikah", "pernikahan", "kua", "nikah", "suami", "istri", "kawin", "catatan sipil"],
+        "keywords": ["nikah", "menikah", "pernikahan", "kua", "suami", "istri", "kawin", "catatan sipil"],
         "label": "Pendaftaran Pernikahan",
     },
     "pindah": {
@@ -183,9 +187,177 @@ TOPIC_CATEGORIES = {
     },
 }
 
+# ─── AI Service (OpenRouter Integration) ───────────────────────────────────────
+
+import httpx
+
+OPENROUTER_KEY = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+HAS_AI_API = bool(OPENROUTER_KEY)
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+AI_MODEL = "openai/gpt-4o-mini"
+
+CITIZEN_SYSTEM_PROMPT = f"Anda adalah AI Civic Assistant JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}. Presiden Indonesia saat ini adalah Prabowo Subianto.\n" + """
+WAJIB: Balas HANYA dengan JSON valid. Mulai langsung dengan { tanpa teks apapun di luar JSON.
+
+## ATURAN DETEKSI INTENT:
+
+1. Jika user menyapa, berterima kasih, atau ngobrol santai (contoh: "halo", "hi", "terima kasih", "apa kabar", "siapa kamu", "test", "hari ini hari apa", "siapa presiden"), balas dengan format CASUAL:
+{"type":"casual","message":"balasan ramah dan natural dalam Bahasa Indonesia"}
+
+2. Jika user menyampaikan keluhan, masalah, kasus, atau pertanyaan seputar layanan publik/pemerintah, balas dengan format ANALYSIS:
+{"type":"analysis","summary":"ringkasan 1 kalimat spesifik","analysis":"analisis 2-3 kalimat","relevant_programs":[{"name":"nama","agency":"instansi","description":"deskripsi singkat","match_score":85,"url":"https://..."}],"required_documents":[{"name":"nama","description":"keterangan","priority":"high"}],"risk_factors":[{"risk":"risiko","severity":"medium","mitigation":"solusi"}],"timeline":{"estimated_days":14,"steps":[{"step":1,"action":"langkah konkret","duration":"1 hari","office":"kantor tujuan"}]},"action_plan":{"today":["langkah hari ini"],"this_week":["langkah minggu ini"],"next_step":["langkah berikutnya"]},"success_probability":75}
+
+Gunakan data nyata pemerintah Indonesia. Jawab SPESIFIK sesuai situasi warga."""
+
+def _extract_json(text: str) -> dict:
+    text = re.sub(r"```(?:json)?\s*\n?", "", text)
+    text = re.sub(r"\n?```", "", text)
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    depth = 0
+    start = None
+    for i, ch in enumerate(text):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start is not None:
+                try:
+                    return json.loads(text[start : i + 1])
+                except json.JSONDecodeError:
+                    depth = 0
+                    start = None
+    return {}
+
+def _validate_analysis(result: dict) -> bool:
+    required = ["summary", "analysis", "relevant_programs", "required_documents",
+                 "risk_factors", "timeline", "action_plan", "success_probability"]
+    if not all(k in result for k in required):
+        return False
+    result["timeline"].setdefault("steps", [])
+    result["timeline"].setdefault("estimated_days", 14)
+    result["action_plan"].setdefault("today", [])
+    result["action_plan"].setdefault("this_week", [])
+    result["action_plan"].setdefault("next_step", [])
+    return True
+
+def _validate_casual(result: dict) -> bool:
+    return "message" in result and isinstance(result["message"], str) and len(result["message"]) > 0
+
+def analyze_with_ai(message: str) -> Optional[dict]:
+    if not HAS_AI_API:
+        return None
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://jernih.app",
+        "X-Title": "JERNIH OS",
+    }
+    payload = {
+        "model": AI_MODEL,
+        "messages": [
+            {"role": "system", "content": CITIZEN_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Pertanyaan warga: {message}"},
+        ],
+        "temperature": 0.4,
+        "max_tokens": 2000,
+    }
+    for attempt in range(2):
+        try:
+            with httpx.Client(timeout=15.0) as http:
+                resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
+            if resp.status_code in (401, 403):
+                return None
+            if resp.status_code == 402:
+                payload["model"] = "google/gemma-2-9b-it:free"
+                continue
+            if resp.status_code == 429:
+                return None
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            raw = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if not raw.strip():
+                return None
+            result = _extract_json(raw)
+            if not result:
+                repaired = raw.strip()
+                open_braces = repaired.count("{") - repaired.count("}")
+                open_brackets = repaired.count("[") - repaired.count("]")
+                repaired += "]" * max(0, open_brackets) + "}" * max(0, open_braces)
+                result = _extract_json(repaired)
+                if not result:
+                    return None
+            resp_type = result.get("type", "analysis")
+            if resp_type == "casual" and _validate_casual(result):
+                return {"type": "casual", "message": result["message"]}
+            result.pop("type", None)
+            if _validate_analysis(result):
+                result["type"] = "analysis"
+                return result
+            return None
+        except httpx.TimeoutException:
+            time.sleep(3)
+        except Exception:
+            if attempt < 1:
+                time.sleep(2)
+            else:
+                return None
+    return None
+
+def ask_ai_json(system_prompt: str, user_prompt: str) -> Optional[dict]:
+    if not HAS_AI_API:
+        return None
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://jernih.app",
+        "X-Title": "JERNIH OS",
+    }
+    payload = {
+        "model": AI_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.4,
+        "max_tokens": 2000,
+    }
+    for attempt in range(2):
+        try:
+            with httpx.Client(timeout=15.0) as http:
+                resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
+            if resp.status_code in (401, 403, 429):
+                return None
+            if resp.status_code == 402:
+                payload["model"] = "google/gemma-2-9b-it:free"
+                continue
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            raw = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if not raw.strip():
+                return None
+            result = _extract_json(raw)
+            if not result:
+                repaired = raw.strip()
+                open_braces = repaired.count("{") - repaired.count("}")
+                open_brackets = repaired.count("[") - repaired.count("]")
+                repaired += "]" * max(0, open_brackets) + "}" * max(0, open_braces)
+                result = _extract_json(repaired)
+            return result
+        except Exception:
+            pass
+    return None
+
+# ─── AI Logic (ported from backend) ───────────────────────────────────────────
 
 def _detect_topic(message: str) -> str:
-    """Detect the main topic of the user's message."""
     m = message.lower()
     topic_scores = {}
     for topic, config in TOPIC_CATEGORIES.items():
@@ -196,15 +368,11 @@ def _detect_topic(message: str) -> str:
         return max(topic_scores, key=topic_scores.get)
     return "general"
 
-
 def _get_topic_label(topic: str) -> str:
     return TOPIC_CATEGORIES.get(topic, {}).get("label", "Layanan Publik")
 
-
 def _generate_contextual_summary(message: str, matched_programs: list, topic: str = "general") -> str:
-    """Generate a summary that's contextual to the user's message."""
     m = message.lower()
-
     if topic == "greeting":
         hour = datetime.now().hour
         if hour < 11:
@@ -216,7 +384,6 @@ def _generate_contextual_summary(message: str, matched_programs: list, topic: st
         else:
             time_greeting = "Selamat malam"
         return f"{time_greeting}! Saya AI Civic Copilot JERNIH OS. Ada yang bisa saya bantu? Ceritakan situasi Anda, saya akan membantu menemukan solusi dan program yang sesuai."
-
     if topic == "kematian":
         return "Kami turut berduka cita atas kepergian anggota keluarga Anda. Berikut adalah langkah-langkah yang perlu Anda urus terkait dokumen kependudukan, hak waris, dan program bantuan yang mungkin Anda perlukan."
     if topic == "pendidikan":
@@ -251,24 +418,16 @@ def _generate_contextual_summary(message: str, matched_programs: list, topic: st
         return "Kami turut prihatin atas bencana yang Anda alami. Berikut informasi bantuan, kontak darurat, dan prosedur pengajuan bantuan bencana."
     if topic == "korupsi":
         return "Kami akan membantu Anda menyampaikan pengaduan atau laporan. Berikut saluran resmi, prosedur pelaporan, dan informasi perlindungan pelapor."
-
-    # General fallback - extract what user is asking about
     words = m.split()
     question_words = ["apa", "bagaimana", "siapa", "kapan", "dimana", "mengapa", "berapa", "apakah", "bisakah", "bolehkah"]
     has_question = any(q in words for q in question_words)
-
     if has_question:
-        return f"Terima kasih atas pertanyaan Anda. JERNIH OS akan membantu Anda menemukan informasi yang dibutuhkan. Berikut analisis dan rekomendasi yang sesuai dengan pertanyaan Anda."
+        return "Terima kasih atas pertanyaan Anda. JERNIH OS akan membantu Anda menemukan informasi yang dibutuhkan. Berikut analisis dan rekomendasi yang sesuai dengan pertanyaan Anda."
     return "Berdasarkan situasi yang Anda sampaikan, JERNIH OS telah menganalisis kebutuhan Anda dan menyusun rekomendasi program, dokumen, dan langkah-langkah yang perlu Anda tempuh untuk mengakses layanan publik."
 
-
 def _generate_contextual_analysis(message: str, matched_programs: list, topic: str = "general") -> str:
-    """Generate analysis contextual to the user's message."""
-    m = message.lower()
-
     if topic == "greeting":
         return "Saya siap membantu Anda! Silakan ceritakan situasi atau pertanyaan Anda seputar layanan publik, bantuan sosial, kependudukan, atau program pemerintah lainnya."
-
     if topic == "kematian":
         progs = ", ".join(p["name"] for p in matched_programs[:2]) if matched_programs else "program bantuan"
         return f"Dari informasi yang Anda sampaikan, prioritas utama adalah mengurus akta kematian dan perbaikan data kependudukan. Setelah itu, Anda dapat mengakses {progs}. Kami sarankan untuk mengurus dokumen secara bertahap."
@@ -296,18 +455,12 @@ def _generate_contextual_analysis(message: str, matched_programs: list, topic: s
         return f"Layanan {_get_topic_label(topic).lower()} disediakan oleh instansi terkait di wilayah masing-masing. Prosedur pengurusan dapat dilakukan secara online maupun offline."
     if topic in ["perumahan", "paspor", "sim", "bencana", "korupsi"]:
         return f"Berdasarkan analisis, kami telah menyusun informasi lengkap mengenai {_get_topic_label(topic).lower()} yang sesuai dengan kebutuhan Anda."
-
     matched_names = ", ".join(p["name"] for p in matched_programs[:2]) if matched_programs else "beberapa layanan publik"
     return f"Dari informasi yang diberikan, Anda dapat mengakses {matched_names} untuk memenuhi kebutuhan Anda. Kami merekomendasikan untuk mempersiapkan dokumen dasar terlebih dahulu sebelum memulai proses pengurusan."
 
-
 def _generate_contextual_timeline(message: str, topic: str = "general") -> dict:
-    """Generate timeline contextual to user's situation."""
-    m = message.lower()
-
     if topic == "greeting":
         return {"estimated_days": 0, "steps": [{"step": 1, "action": "Sampaikan pertanyaan Anda", "duration": "Sekarang", "office": "-"}]}
-
     if topic == "kematian":
         steps = [
             {"step": 1, "action": "Urus Akta Kematian di Dukcapil", "duration": "1-3 hari", "office": "Dukcapil"},
@@ -396,8 +549,6 @@ def _generate_contextual_timeline(message: str, topic: str = "general") -> dict:
             {"step": 5, "action": "Foto dan ambil SIM", "duration": "1 jam", "office": "Satpas SIM"},
         ]
         return {"estimated_days": 3, "steps": steps}
-
-    # Default timeline
     steps = [
         {"step": 1, "action": "Verifikasi dokumen kependudukan", "duration": "1-2 hari", "office": "Dukcapil"},
         {"step": 2, "action": "Urus dokumen pendukung", "duration": "1 hari", "office": "Kantor Kelurahan"},
@@ -408,7 +559,6 @@ def _generate_contextual_timeline(message: str, topic: str = "general") -> dict:
     return {"estimated_days": 14, "steps": steps}
 
 def _generate_contextual_documents(message: str, topic: str = "general") -> list:
-    """Generate document list contextual to user's situation."""
     if topic == "greeting":
         return []
     base = [
@@ -479,13 +629,11 @@ def _generate_contextual_documents(message: str, topic: str = "general") -> list
     return base
 
 def _generate_action_plan(message: str, topic: str = "general") -> dict:
-    """Generate action plan contextual to user's situation."""
     if topic == "greeting":
         return {"today": ["Silakan ceritakan situasi Anda"], "this_week": [], "next_step": []}
     today = ["Kumpulkan dokumen identitas (KK, KTP)", "Hubungi kelurahan untuk informasi"]
     this_week = ["Verifikasi dokumen ke Dukcapil", "Lengkapi dokumen pendukung"]
     next_step = ["Daftar program bantuan", "Pantau status pengajuan"]
-
     if topic == "kematian":
         today = ["Urus Akta Kematian di Dukcapil", "Kumpulkan dokumen ahli waris", "Hubungi kelurahan untuk surat keterangan"]
         this_week = ["Perbaiki data KK di Dukcapil", "Urus surat pindah/domisili", "Cek program bantuan untuk keluarga ditinggalkan"]
@@ -522,11 +670,9 @@ def _generate_action_plan(message: str, topic: str = "general") -> dict:
         today = ["Kumpulkan surat keterangan lahir dari bidan/dokter", "Siapkan KK dan KTP orang tua"]
         this_week = ["Datang ke Dukcapil untuk daftar", "Isi formulir permohonan akta"]
         next_step = ["Ambil Akta Kelahiran", "Update KK dengan anggota baru"]
-
     return {"today": today, "this_week": this_week, "next_step": next_step}
 
 def _generate_risk_factors(message: str, topic: str = "general") -> list:
-    """Generate risk factors contextual to user's situation."""
     if topic == "greeting":
         return []
     risks = [
@@ -565,26 +711,13 @@ def _generate_risk_factors(message: str, topic: str = "general") -> list:
         ]
     return risks
 
-
 def analyze_situation(message: str) -> Union[CopilotResponse, CasualResponse]:
-    """Analyze a citizen's situation using Gemini AI (or fallback to rule-based).
-
-    Returns CasualResponse for greetings/casual chat, CopilotResponse for analysis.
-    """
-    message_lower = message.lower()
     session_id = f"sess_{datetime.now().strftime('%Y%m%d%H%M%S')}_{random.randint(1000, 9999)}"
 
-    # Try AI API first (OpenRouter with Gemini/Claude/GPT)
     ai_result = analyze_with_ai(message)
     if ai_result:
-        # Handle casual AI response
         if ai_result.get("type") == "casual":
-            return CasualResponse(
-                session_id=session_id,
-                message=ai_result["message"],
-            )
-
-        # Handle analysis AI response
+            return CasualResponse(session_id=session_id, message=ai_result["message"])
         trust = TrustScore(
             overall=round(random.uniform(85, 96), 1),
             reliability=round(random.uniform(88, 98), 1),
@@ -611,20 +744,13 @@ def analyze_situation(message: str) -> Union[CopilotResponse, CasualResponse]:
                 ],
             )
         except Exception:
-            pass  # Fall through to rule-based
+            pass
 
-    # Fallback: rule-based contextual logic
+    message_lower = message.lower()
     topic = _detect_topic(message)
-
-    # For greetings, return a lightweight casual response
     if topic == "greeting":
         summary = _generate_contextual_summary(message, [], topic)
-        return CasualResponse(
-            session_id=session_id,
-            message=summary,
-        )
-
-    # For analysis topics, build full response
+        return CasualResponse(session_id=session_id, message=summary)
     matched_programs = []
     for prog_id, prog in KNOWLEDGE_BASE["programs"].items():
         score = sum(1 for kw in prog["keywords"] if kw in message_lower)
@@ -636,18 +762,15 @@ def analyze_situation(message: str) -> Union[CopilotResponse, CasualResponse]:
                 "match_score": min(score * 25 + 50, 98),
                 "url": prog.get("url", ""),
             })
-
     if not matched_programs:
         matched_programs = [
             {"name": "Program Indonesia Pintar (PIP)", "agency": "Kemdikdasmen", "description": "Bantuan pendidikan untuk anak usia sekolah dari keluarga miskin/rentan", "match_score": 75, "url": "https://pip.kemdikbud.go.id"},
             {"name": "Kartu Indonesia Sehat (KIS)", "agency": "BPJS Kesehatan", "description": "Jaminan kesehatan bagi masyarakat kurang mampu", "match_score": 65},
         ]
-
     timeline = _generate_contextual_timeline(message, topic)
     docs = _generate_contextual_documents(message, topic)
     action_plan = _generate_action_plan(message, topic)
     risks = _generate_risk_factors(message, topic)
-
     trust = TrustScore(
         overall=round(random.uniform(80, 95), 1),
         reliability=round(random.uniform(85, 98), 1),
@@ -655,7 +778,6 @@ def analyze_situation(message: str) -> Union[CopilotResponse, CasualResponse]:
         verification=round(random.uniform(82, 95), 1),
         transparency=round(random.uniform(88, 98), 1),
     )
-
     return CopilotResponse(
         session_id=session_id,
         summary=_generate_contextual_summary(message, matched_programs, topic),
@@ -674,31 +796,18 @@ def analyze_situation(message: str) -> Union[CopilotResponse, CasualResponse]:
         ],
     )
 
-
-def analyze_hoax(text: str, text_type: str) -> dict:
-    """Analyze text for potential hoax/misinformation using AI, fallback to rule-based."""
+def analyze_hoax(text: str, text_type: str = "text") -> dict:
     if not text or not text.strip():
-        return {
-            "credibility_score": 100,
-            "verdict": "credible",
-            "analysis": "Tidak ada teks untuk dianalisis.",
-            "source_comparison": [],
-            "fact_checks": [],
-            "indicators": [],
-        }
-
-    from app.services.gemini_service import ask_ai_json
+        return {"credibility_score": 100, "verdict": "credible", "analysis": "Tidak ada teks untuk dianalisis.", "source_comparison": [], "fact_checks": [], "indicators": []}
 
     HOAX_SYSTEM_PROMPT = f"Anda adalah AI Hoax Checker JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}.\n" + """
 Anda adalah ahli verifikasi informasi dan deteksi hoaks. Analisis teks yang diberikan dan berikan penilaian kredibilitas.
-
 WAJIB: Balas HANYA dengan JSON valid. Mulai langsung dengan { tanpa teks apapun di luar JSON.
-
 Format JSON yang harus dikembalikan:
 {
   "credibility_score": angka 0-100,
   "verdict": "hoax" jika < 40, "questionable" jika 40-74, "credible" jika >= 75,
-  "analysis": "Penjelasan detail mengapa informasi ini hoaks/mencurigakan/kredibel. Sertakan alasan spesifik dan konteks.",
+  "analysis": "Penjelasan detail mengapa informasi ini hoaks/mencurigakan/kredibel.",
   "source_comparison": [
     {"source": "nama sumber resmi", "alignment": "supports/contradicts/neutral", "excerpt": "kutipan atau penjelasan singkat"}
   ],
@@ -707,10 +816,8 @@ Format JSON yang harus dikembalikan:
   ],
   "indicators": ["indikator mencurigakan yang ditemukan", ...]
 }
+Gunakan sumber resmi Indonesia seperti: data.go.id, kemensos.go.id, kominfo.go.id, kemendikbud.go.id, bpjs-kesehatan.go.id, dukcapil.kemendagri.go.id, factcheck.id, turnbackhoax.id, dll."""
 
-Gunakan sumber resmi Indonesia seperti: data.go.id, kemensos.go.id, kominfo.go.id, kemendikbud.go.id, bpjs-kesehatan.go.id, dukcapil.kemendagri.go.id, factcheck.id, turnbackhoax.id, dll.
-Berikan analisis yang bertanggung jawab dan edukatif."""
-    
     ai_result = ask_ai_json(HOAX_SYSTEM_PROMPT, f"Teks yang akan diverifikasi (tipe: {text_type}):\n\n{text[:3000]}")
     if ai_result and all(k in ai_result for k in ["credibility_score", "verdict", "analysis"]):
         ai_result.setdefault("source_comparison", [])
@@ -718,7 +825,6 @@ Berikan analisis yang bertanggung jawab dan edukatif."""
         ai_result.setdefault("indicators", [])
         return ai_result
 
-    # Fallback: rule-based keyword scoring
     suspicious_indicators = [
         "bagikan", "sebarkan", "viral", "jangan lupa share",
         "di luar nalar", "tidak masuk akal", "dijamin",
@@ -729,7 +835,6 @@ Berikan analisis yang bertanggung jawab dan edukatif."""
         "transfer", "nomor rekening", "klik link",
         "bagikan ke 10", "sebelum dihapus", "sekarang juga",
     ]
-
     text_lower = text.lower()
     score = 100
     matched_indicators = []
@@ -737,46 +842,29 @@ Berikan analisis yang bertanggung jawab dan edukatif."""
         if ind.lower() in text_lower:
             score -= 15
             matched_indicators.append(f"Mengandung kata kunci mencurigakan: '{ind}'")
-
     score = max(score, 5)
-
     if score < 40:
         verdict = "hoax"
     elif score < 75:
         verdict = "questionable"
     else:
         verdict = "credible"
-
     return {
         "credibility_score": score,
         "verdict": verdict,
-        "analysis": (
-            "Informasi ini memiliki indikasi kuat sebagai hoaks."
-            if verdict == "hoax"
-            else "Informasi ini perlu diverifikasi lebih lanjut."
-            if verdict == "questionable"
-            else "Informasi ini tampaknya kredibel."
-        ),
+        "analysis": "Informasi ini memiliki indikasi kuat sebagai hoaks." if verdict == "hoax" else "Informasi ini perlu diverifikasi lebih lanjut." if verdict == "questionable" else "Informasi ini tampaknya kredibel.",
         "source_comparison": [
             {"source": "Portal Informasi Indonesia (data.go.id)", "alignment": "contradicts" if verdict != "credible" else "supports", "excerpt": "Data resmi menunjukkan tidak ada kebijakan tersebut" if verdict != "credible" else "Informasi sesuai dengan data resmi"},
             {"source": "Kemensos RI", "alignment": "contradicts" if verdict != "credible" else "neutral"},
         ],
-        "fact_checks": [
-            {"claim": "Klaim dalam informasi", "verdict": "SALAH" if verdict != "credible" else "BENAR", "source": "Kemensos RI"},
-        ],
+        "fact_checks": [{"claim": "Klaim dalam informasi", "verdict": "SALAH" if verdict != "credible" else "BENAR", "source": "Kemensos RI"}],
         "indicators": matched_indicators if verdict != "credible" else ["Informasi ini lolos verifikasi awal"],
     }
 
-
 def generate_action_plan(situation: str) -> dict:
-    """Generate a personalized action plan using AI, fallback to rule-based."""
-    from app.services.gemini_service import ask_ai_json
-
     ACTION_PLAN_SYSTEM_PROMPT = f"Anda adalah AI Action Plan Generator JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}. Presiden Indonesia saat ini adalah Prabowo Subianto.\n" + """
 Berdasarkan situasi warga negara Indonesia, buatlah rencana aksi personal yang DETAIL, KONTEKSTUAL, dan SPESIFIK sesuai situasi yang diberikan.
-
 WAJIB: Balas HANYA dengan JSON valid. Mulai langsung dengan { tanpa teks apapun di luar JSON.
-
 Format JSON yang harus dikembalikan:
 {
   "title": "judul rencana aksi spesifik sesuai situasi",
@@ -797,9 +885,7 @@ Format JSON yang harus dikembalikan:
   "risks": [
     {"risk": "deskripsi risiko", "probability": "high/medium/low", "impact": "high/medium/low"}
   ]
-}
-
-Gunakan data dan prosedur nyata pemerintah Indonesia. Buat langkah-langkah yang REALISTIS dan bisa langsung dilakukan warga. Jawab SPESIFIK sesuai situasi yang diberikan."""
+}"""
 
     ai_result = ask_ai_json(ACTION_PLAN_SYSTEM_PROMPT, f"Situasi warga:\n\n{situation}")
     if ai_result and all(k in ai_result for k in ["title", "overview", "citizen_success_score", "document_readiness", "eligibility_score", "program_match", "timeline", "required_documents", "recommendations", "risks"]):
@@ -809,30 +895,19 @@ Gunakan data dan prosedur nyata pemerintah Indonesia. Buat langkah-langkah yang 
         ai_result.setdefault("risks", [])
         return ai_result
 
-    # Fallback: rule-based contextual logic
     topic = _detect_topic(situation)
     action_plan = _generate_action_plan(situation, topic)
-
     return {
         "title": _get_topic_label(topic) if topic != "general" else "Rencana Aksi Personal",
-        "overview": f"Berdasarkan situasi yang Anda alami, JERNIH OS telah menganalisis kebutuhan dan menyusun rencana aksi personal.",
+        "overview": "Berdasarkan situasi yang Anda alami, JERNIH OS telah menganalisis kebutuhan dan menyusun rencana aksi personal.",
         "citizen_success_score": round(random.uniform(70, 92), 0),
         "document_readiness": round(random.uniform(40, 85), 0),
         "eligibility_score": round(random.uniform(65, 90), 0),
         "program_match": round(random.uniform(75, 95), 0),
         "timeline": [
-            {
-                "phase": "Hari Ini",
-                "tasks": [{"task": t, "deadline": "Hari ini", "priority": "high", "done": False} for t in action_plan.get("today", [])],
-            },
-            {
-                "phase": "Minggu Ini",
-                "tasks": [{"task": t, "deadline": "3-7 hari", "priority": "high", "done": False} for t in action_plan.get("this_week", [])],
-            },
-            {
-                "phase": "Minggu Depan",
-                "tasks": [{"task": t, "deadline": "14 hari", "priority": "medium", "done": False} for t in action_plan.get("next_step", [])],
-            },
+            {"phase": "Hari Ini", "tasks": [{"task": t, "deadline": "Hari ini", "priority": "high", "done": False} for t in action_plan.get("today", [])]},
+            {"phase": "Minggu Ini", "tasks": [{"task": t, "deadline": "3-7 hari", "priority": "high", "done": False} for t in action_plan.get("this_week", [])]},
+            {"phase": "Minggu Depan", "tasks": [{"task": t, "deadline": "14 hari", "priority": "medium", "done": False} for t in action_plan.get("next_step", [])]},
         ],
         "required_documents": [
             {"name": "Kartu Keluarga (KK)", "status": "need", "notes": "Fotokopi 3 lembar"},
@@ -850,9 +925,7 @@ Gunakan data dan prosedur nyata pemerintah Indonesia. Buat langkah-langkah yang 
         ],
     }
 
-
 def simulate_policy(policy: str, change: str) -> dict:
-    """Simulate the impact of policy changes."""
     return {
         "summary": f"Simulasi perubahan kebijakan {policy}: '{change}' menunjukkan dampak signifikan terhadap cakupan penerima manfaat.",
         "affected_groups": [
@@ -860,11 +933,7 @@ def simulate_policy(policy: str, change: str) -> dict:
             {"group": "Masyarakat berpenghasilan rendah", "impact": "positive", "estimate": "+12,000 penerima baru"},
             {"group": "Masyarakat berpendapatan menengah", "impact": "negative", "estimate": "-8,000 kehilangan akses"},
         ],
-        "coverage_change": {
-            "before": 8900000,
-            "after": 9450000,
-            "difference": 550000,
-        },
+        "coverage_change": {"before": 8900000, "after": 9450000, "difference": 550000},
         "opportunity_loss": "Diperkirakan 8,000 warga kehilangan akses, namun 550,000 warga baru mendapatkan akses. Dampak bersih: positif.",
         "social_impact": "Perubahan ini berpotensi meningkatkan partisipasi hingga 3.2%.",
         "recommendations": [
@@ -874,9 +943,7 @@ def simulate_policy(policy: str, change: str) -> dict:
         ],
     }
 
-
 def get_knowledge_graph() -> dict:
-    """Return knowledge graph data."""
     return {
         "nodes": [
             {"id": "pip", "label": "Program Indonesia Pintar", "type": "program", "description": "Bantuan pendidikan untuk siswa kurang mampu"},
@@ -927,9 +994,7 @@ def get_knowledge_graph() -> dict:
         ],
     }
 
-
 def get_analytics() -> dict:
-    """Return analytics dashboard data."""
     return {
         "total_citizens_served": 124583,
         "total_time_saved_minutes": 4890000,
@@ -961,3 +1026,698 @@ def get_analytics() -> dict:
             "Nusa Tenggara Timur": {"education": 52, "health": 48, "social": 44, "accessibility": 42},
         },
     }
+
+
+# ─── UI Components ────────────────────────────────────────────────────────────
+
+def render_header():
+    st.markdown("""
+    <style>
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    .main-header h1 {
+        color: white;
+        margin: 0;
+        font-size: 2.5rem;
+    }
+    .main-header p {
+        color: rgba(255,255,255,0.85);
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+    }
+    .stApp {
+        background: #0f0f1a;
+    }
+    .card {
+        background: #1a1a2e;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid #2a2a4a;
+        margin-bottom: 1rem;
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border-radius: 12px;
+        padding: 1.2rem;
+        border: 1px solid #2a2a4a;
+        text-align: center;
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        color: #888;
+        margin-top: 0.3rem;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .badge-high { background: #ff4757; color: white; }
+    .badge-medium { background: #ffa502; color: white; }
+    .badge-low { background: #2ed573; color: white; }
+    .badge-success { background: #2ed573; color: white; }
+    .badge-warning { background: #ffa502; color: white; }
+    .badge-danger { background: #ff4757; color: white; }
+    .badge-info { background: #667eea; color: white; }
+    .trust-score-ring {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: white;
+    }
+    .step-card {
+        background: #16213e;
+        border-left: 3px solid #667eea;
+        padding: 0.8rem 1rem;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 0.5rem;
+    }
+    .step-number {
+        background: #667eea;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    .footer {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+        font-size: 0.85rem;
+        border-top: 1px solid #2a2a4a;
+        margin-top: 3rem;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: #1a1a2e;
+        border-radius: 8px 8px 0 0;
+        padding: 0.5rem 1rem;
+        color: #888;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #667eea;
+        color: white;
+    }
+    .chat-message {
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 0.8rem;
+    }
+    .chat-user {
+        background: #1a1a2e;
+        border: 1px solid #2a2a4a;
+    }
+    .chat-ai {
+        background: #16213e;
+        border: 1px solid #667eea33;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+def render_sidebar():
+    with st.sidebar:
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem 0;">
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.8rem;">
+                <span style="font-size: 2rem;">🧠</span>
+            </div>
+            <h2 style="margin: 0; color: white;">JERNIH OS</h2>
+            <p style="color: #888; font-size: 0.8rem; margin: 0;">AI Civic Operating System</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        menu_items = {
+            "🏠": ("Beranda", "home"),
+            "🤖": ("AI Civic Copilot", "copilot"),
+            "📋": ("Action Plan Generator", "action_plan"),
+            "🔍": ("Hoax Checker", "hoax_checker"),
+            "📊": ("Policy Simulator", "policy_simulator"),
+            "📈": ("Analytics Dashboard", "analytics"),
+            "🔗": ("Knowledge Graph", "knowledge_graph"),
+        }
+        
+        for icon, (label, key) in menu_items.items():
+            if st.button(f"{icon} {label}", key=f"nav_{key}", use_container_width=True, 
+                         type="secondary" if st.session_state.get("page") != key else "primary"):
+                st.session_state.page = key
+                st.rerun()
+        
+        st.divider()
+        st.markdown(f"<p style='text-align: center; color: #555; font-size: 0.75rem;'>v{VERSION} | LKS 2026</p>", unsafe_allow_html=True)
+
+def render_home():
+    st.markdown("""
+    <div class="main-header">
+        <h1>🧠 JERNIH OS</h1>
+        <p>Informasi yang Terang, Bukan yang Bising</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    metrics = [
+        ("124.583", "Warga Dibantu", "+23%"),
+        ("81.500", "Jam Hemat", "+15%"),
+        ("15.420", "Program Ditemukan", "+31%"),
+        ("Rp15,78 M", "Dampak Ekonomi", "+45%"),
+    ]
+    for col, (value, label, change) in zip([col1, col2, col3, col4], metrics):
+        with col:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{value}</div>
+                <div class="metric-label">{label}</div>
+                <span class="badge badge-success">{change}</span>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("<h2 style='margin-top: 2rem;'>Platform Civic AI Lengkap</h2>", unsafe_allow_html=True)
+    
+    features = [
+        ("🤖", "AI Civic Copilot", "Asisten AI yang membantu memahami layanan publik, dokumen, dan prosedur pemerintahan."),
+        ("🔗", "Knowledge Graph", "Visualisasi interaktif hubungan antara program, dokumen, dan instansi pemerintah."),
+        ("📋", "Action Plan Generator", "Rencana aksi personal untuk mengurus dokumen dan mengakses program bantuan."),
+        ("🔍", "Hoax Checker", "Verifikasi informasi dan deteksi hoaks dengan analisis sumber terpercaya."),
+        ("📊", "Policy Simulator", "Simulasi dampak perubahan kebijakan terhadap masyarakat Indonesia."),
+        ("📈", "Analytics Dashboard", "Skor kesehatan komunitas berdasarkan pendidikan, kesehatan, dan aksesibilitas."),
+    ]
+    
+    for i in range(0, len(features), 3):
+        cols = st.columns(3)
+        for col, (icon, title, desc) in zip(cols, features[i:i+3]):
+            with col:
+                st.markdown(f"""
+                <div class="card" style="cursor: pointer;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">{icon}</div>
+                    <h3 style="margin: 0 0 0.5rem; color: white;">{title}</h3>
+                    <p style="color: #888; font-size: 0.9rem; margin: 0;">{desc}</p>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="card" style="margin-top: 2rem; text-align: center;">
+        <h3 style="color: white;">AI yang Dapat Dipercaya</h3>
+        <p style="color: #888;">Setiap jawaban dilengkapi dengan skor kepercayaan, sumber yang terverifikasi, dan penjelasan yang transparan. Tidak ada black box.</p>
+        <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
+            <span style="color: #2ed573;">✓ Semua informasi dilengkapi sumber resmi</span>
+            <span style="color: #2ed573;">✓ Verifikasi otomatis dengan data pemerintah</span>
+            <span style="color: #2ed573;">✓ Privasi warga adalah prioritas utama</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_copilot():
+    st.markdown("<h1>🤖 AI Civic Copilot</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Ceritakan situasi Anda, AI akan membantu menganalisis dan memberikan rekomendasi program serta langkah-langkah yang sesuai.</p>", unsafe_allow_html=True)
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    if prompt := st.chat_input("Ceritakan situasi Anda..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        with st.chat_message("assistant"):
+            with st.spinner("Menganalisis..."):
+                result = analyze_situation(prompt)
+                
+                if isinstance(result, CasualResponse):
+                    st.markdown(result.message)
+                    st.session_state.messages.append({"role": "assistant", "content": result.message})
+                else:
+                    tabs = st.tabs(["📝 Ringkasan", "📋 Program", "📄 Dokumen", "📅 Timeline", "⚠️ Risiko", "🎯 Rencana Aksi", "🔗 Sumber"])
+                    
+                    with tabs[0]:
+                        st.markdown(f"**{result.summary}**")
+                        st.markdown(f"<p>{result.analysis}</p>", unsafe_allow_html=True)
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown(f"<div class='metric-card'><div class='metric-value'>{result.success_probability:.0f}%</div><div class='metric-label'>Probabilitas Keberhasilan</div></div>", unsafe_allow_html=True)
+                        with col2:
+                            st.markdown(f"<div class='metric-card'><div class='metric-value'>{result.trust_score.overall:.0f}</div><div class='metric-label'>Trust Score</div></div>", unsafe_allow_html=True)
+                    
+                    with tabs[1]:
+                        for prog in result.relevant_programs:
+                            st.markdown(f"""
+                            <div class="card">
+                                <h4 style="color: white; margin: 0 0 0.3rem;">{prog['name']}</h4>
+                                <p style="color: #888; margin: 0 0 0.3rem; font-size: 0.85rem;">{prog.get('agency', '')}</p>
+                                <p style="color: #aaa; margin: 0; font-size: 0.9rem;">{prog.get('description', '')}</p>
+                                <span class="badge badge-info">Match: {prog.get('match_score', 0)}%</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    
+                    with tabs[2]:
+                        for doc in result.required_documents:
+                            priority = doc.get("priority", "medium")
+                            badge_class = {"high": "badge-high", "medium": "badge-medium", "low": "badge-low"}.get(priority, "badge-medium")
+                            st.markdown(f"""
+                            <div class="card" style="padding: 0.8rem 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong style="color: white;">{doc['name']}</strong>
+                                        <p style="color: #888; margin: 0; font-size: 0.8rem;">{doc.get('description', '')}</p>
+                                    </div>
+                                    <span class="badge {badge_class}">{priority.upper()}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    
+                    with tabs[3]:
+                        timeline = result.timeline
+                        st.markdown(f"<p><strong>Estimasi total:</strong> {timeline.get('estimated_days', 0)} hari</p>", unsafe_allow_html=True)
+                        for step in timeline.get("steps", []):
+                            st.markdown(f"""
+                            <div class="step-card">
+                                <span class="step-number">{step['step']}</span>
+                                <strong style="color: white;">{step['action']}</strong>
+                                <div style="color: #888; font-size: 0.8rem; margin-left: 2rem;">
+                                    ⏱ {step['duration']} | 🏢 {step['office']}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    
+                    with tabs[4]:
+                        for risk in result.risk_factors:
+                            severity = risk.get("severity", "medium")
+                            badge_class = {"high": "badge-danger", "medium": "badge-warning", "low": "badge-success"}.get(severity, "badge-warning")
+                            st.markdown(f"""
+                            <div class="card" style="padding: 0.8rem 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div style="flex: 1;">
+                                        <strong style="color: white;">{risk['risk']}</strong>
+                                        <p style="color: #888; margin: 0.3rem 0 0; font-size: 0.85rem;">✅ {risk.get('mitigation', '')}</p>
+                                    </div>
+                                    <span class="badge {badge_class}">{severity.upper()}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    
+                    with tabs[5]:
+                        ap = result.action_plan
+                        phases = [
+                            ("Hari Ini", ap.get("today", []), "#2ed573"),
+                            ("Minggu Ini", ap.get("this_week", []), "#ffa502"),
+                            ("Selanjutnya", ap.get("next_step", []), "#667eea"),
+                        ]
+                        for phase_name, tasks, color in phases:
+                            if tasks:
+                                st.markdown(f"<h4 style='color: {color};'>📌 {phase_name}</h4>", unsafe_allow_html=True)
+                                for task in tasks:
+                                    st.markdown(f"""
+                                    <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem; border-left: 3px solid {color};">
+                                        <span style="color: #ccc;">{task}</span>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                    
+                    with tabs[6]:
+                        for source in result.sources:
+                            st.markdown(f"""
+                            <div class="card" style="padding: 0.8rem 1rem;">
+                                <strong style="color: white;">{source.title}</strong>
+                                <p style="color: #888; margin: 0; font-size: 0.8rem;">{source.url} | {source.type}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    
+                    response_text = f"**{result.summary}**\n\n{result.analysis}"
+                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+def render_action_plan():
+    st.markdown("<h1>📋 Action Plan Generator</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Jelaskan situasi Anda untuk mendapatkan rencana aksi personal yang detail dan terstruktur.</p>", unsafe_allow_html=True)
+    
+    situation = st.text_area("Ceritakan situasi Anda secara detail:", height=150, placeholder="Contoh: Saya ingin mendaftarkan anak saya ke Program Indonesia Pintar (PIP) tapi tidak tahu caranya...")
+    
+    if st.button("Buat Rencana Aksi", type="primary", use_container_width=True):
+        if not situation.strip():
+            st.error("Silakan masukkan situasi Anda terlebih dahulu.")
+        else:
+            with st.spinner("Membuat rencana aksi..."):
+                result = generate_action_plan(situation)
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.markdown(f"<div class='metric-card'><div class='metric-value'>{result['citizen_success_score']:.0f}%</div><div class='metric-label'>Skor Keberhasilan</div></div>", unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"<div class='metric-card'><div class='metric-value'>{result['document_readiness']:.0f}%</div><div class='metric-label'>Kesiapan Dokumen</div></div>", unsafe_allow_html=True)
+                with col3:
+                    st.markdown(f"<div class='metric-card'><div class='metric-value'>{result['eligibility_score']:.0f}%</div><div class='metric-label'>Eligibilitas</div></div>", unsafe_allow_html=True)
+                with col4:
+                    st.markdown(f"<div class='metric-card'><div class='metric-value'>{result['program_match']:.0f}%</div><div class='metric-label'>Kecocokan Program</div></div>", unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div class="card">
+                    <h3 style="color: white; margin: 0 0 0.5rem;">{result['title']}</h3>
+                    <p style="color: #aaa;">{result['overview']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                for phase in result.get("timeline", []):
+                    priority_colors = {"high": "#ff4757", "medium": "#ffa502", "low": "#2ed573"}
+                    st.markdown(f"<h3 style='color: #667eea;'>{phase['phase']}</h3>", unsafe_allow_html=True)
+                    for task in phase.get("tasks", []):
+                        color = priority_colors.get(task.get("priority", "medium"), "#ffa502")
+                        st.markdown(f"""
+                        <div style="background: #16213e; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid {color};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: white;">{'✅' if task.get('done') else '⬜'} {task['task']}</span>
+                                <span style="color: #888; font-size: 0.8rem;">⏱ {task.get('deadline', '')}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                st.markdown("<h3 style='color: #ffa502;'>📄 Dokumen yang Diperlukan</h3>", unsafe_allow_html=True)
+                for doc in result.get("required_documents", []):
+                    status_colors = {"ready": "#2ed573", "need": "#ff4757", "optional": "#888"}
+                    color = status_colors.get(doc.get("status", "need"), "#888")
+                    st.markdown(f"""
+                    <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;">
+                        <span style="color: {color};">{'✅' if doc['status'] == 'ready' else '❌' if doc['status'] == 'need' else '◻️'} {doc['name']}</span>
+                        <span style="color: #888; font-size: 0.8rem; margin-left: 0.5rem;">{doc.get('notes', '')}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("<h3 style='color: #2ed573;'>💡 Rekomendasi</h3>", unsafe_allow_html=True)
+                for rec in result.get("recommendations", []):
+                    st.markdown(f"<div style='background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;'>👉 {rec}</div>", unsafe_allow_html=True)
+                
+                st.markdown("<h3 style='color: #ff4757;'>⚠️ Risiko</h3>", unsafe_allow_html=True)
+                for risk in result.get("risks", []):
+                    prob_colors = {"high": "#ff4757", "medium": "#ffa502", "low": "#2ed573"}
+                    imp_colors = {"high": "#ff4757", "medium": "#ffa502", "low": "#2ed573"}
+                    st.markdown(f"""
+                    <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;">
+                        <span style="color: white;">{risk['risk']}</span>
+                        <span class="badge {f'badge-{risk.get("probability", "medium")}'}" style="margin-left: 0.5rem;">{risk.get('probability', 'medium')}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+def render_hoax_checker():
+    st.markdown("<h1>🔍 Hoax Checker</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Verifikasi informasi dan deteksi hoaks dengan analisis sumber terpercaya.</p>", unsafe_allow_html=True)
+    
+    text = st.text_area("Tempel teks yang ingin diverifikasi:", height=200, placeholder="Tempel berita, pesan WhatsApp, atau informasi yang ingin dicek...")
+    
+    if st.button("Verifikasi", type="primary", use_container_width=True):
+        if not text.strip():
+            st.error("Silakan masukkan teks terlebih dahulu.")
+        else:
+            with st.spinner("Menganalisis..."):
+                result = analyze_hoax(text)
+                
+                score = result["credibility_score"]
+                if score < 40:
+                    verdict_color = "#ff4757"
+                    verdict_icon = "🚨"
+                elif score < 75:
+                    verdict_color = "#ffa502"
+                    verdict_icon = "⚠️"
+                else:
+                    verdict_color = "#2ed573"
+                    verdict_icon = "✅"
+                
+                st.markdown(f"""
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 3rem;">{verdict_icon}</div>
+                    <h2 style="color: {verdict_color}; margin: 0.5rem 0;">{result['verdict'].upper()}</h2>
+                    <div style="font-size: 3rem; font-weight: bold; color: {verdict_color};">{score}/100</div>
+                    <p style="color: #aaa; margin-top: 1rem;">{result['analysis']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if result.get("indicators"):
+                    st.markdown("<h3 style='color: #ffa502;'>🚩 Indikator Mencurigakan</h3>", unsafe_allow_html=True)
+                    for ind in result["indicators"]:
+                        st.markdown(f"<div style='background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;'>⚠️ {ind}</div>", unsafe_allow_html=True)
+                
+                if result.get("source_comparison"):
+                    st.markdown("<h3 style='color: #667eea;'>📊 Perbandingan Sumber</h3>", unsafe_allow_html=True)
+                    for src in result["source_comparison"]:
+                        align_icon = "✅" if src.get("alignment") == "supports" else "❌" if src.get("alignment") == "contradicts" else "◻️"
+                        st.markdown(f"""
+                        <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;">
+                            {align_icon} <strong style="color: white;">{src['source']}</strong>
+                            <span style="color: #888; font-size: 0.85rem;"> — {src.get('excerpt', '')}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                if result.get("fact_checks"):
+                    st.markdown("<h3 style='color: #2ed573;'>🔎 Fact Check</h3>", unsafe_allow_html=True)
+                    for fc in result["fact_checks"]:
+                        st.markdown(f"""
+                        <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;">
+                            <strong style="color: white;">{fc['claim']}</strong>
+                            <span class="badge badge-{'danger' if fc['verdict'] == 'SALAH' else 'success'}">{fc['verdict']}</span>
+                            <span style="color: #888; font-size: 0.8rem;"> — {fc.get('source', '')}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+def render_policy_simulator():
+    st.markdown("<h1>📊 Policy Simulator</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Simulasi dampak perubahan kebijakan terhadap masyarakat Indonesia.</p>", unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        policy = st.selectbox("Pilih Kebijakan:", [
+            "Program Keluarga Harapan (PKH)",
+            "Bantuan Pangan Non-Tunai (BPNT)",
+            "Program Indonesia Pintar (PIP)",
+            "Kartu Indonesia Sehat (KIS)",
+            "Bantuan Langsung Tunai (BLT)",
+        ])
+    with col2:
+        change = st.selectbox("Jenis Perubahan:", [
+            "Perluas kriteria penerima",
+            "Persempit kriteria penerima",
+            "Naikkan nilai bantuan 20%",
+            "Turunkan nilai bantuan 20%",
+            "Gabung dengan program lain",
+        ])
+    
+    if st.button("Simulasikan", type="primary", use_container_width=True):
+        with st.spinner("Menjalankan simulasi..."):
+            result = simulate_policy(policy, change)
+            
+            st.markdown(f"""
+            <div class="card">
+                <h3 style="color: white;">📋 Hasil Simulasi</h3>
+                <p style="color: #aaa;">{result['summary']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<h3 style='color: #667eea;'>👥 Kelompok Terdampak</h3>", unsafe_allow_html=True)
+            for group in result.get("affected_groups", []):
+                impact_icon = "✅" if group.get("impact") == "positive" else "❌" if group.get("impact") == "negative" else "◻️"
+                st.markdown(f"""
+                <div style="background: #16213e; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><strong style="color: white;">{group['group']}</strong></span>
+                        <span>{impact_icon} {group.get('estimate', '')}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            cov = result.get("coverage_change", {})
+            st.markdown("<h3 style='color: #ffa502;'>📈 Perubahan Cakupan</h3>", unsafe_allow_html=True)
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"<div class='metric-card'><div class='metric-value'>{cov.get('before', 0):,}</div><div class='metric-label'>Sebelum</div></div>", unsafe_allow_html=True)
+            with col2:
+                st.markdown(f"<div class='metric-card'><div class='metric-value'>{cov.get('after', 0):,}</div><div class='metric-label'>Sesudah</div></div>", unsafe_allow_html=True)
+            with col3:
+                diff = cov.get('difference', 0)
+                diff_color = "#2ed573" if diff > 0 else "#ff4757"
+                st.markdown(f"<div class='metric-card'><div class='metric-value' style='color: {diff_color};'>+{diff:,}</div><div class='metric-label'>Perubahan</div></div>", unsafe_allow_html=True)
+            
+            st.markdown(f"""
+            <div class="card">
+                <h4 style="color: white;">Analisis Dampak</h4>
+                <p style="color: #aaa;">{result.get('opportunity_loss', '')}</p>
+                <p style="color: #aaa;">{result.get('social_impact', '')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<h3 style='color: #2ed573;'>💡 Rekomendasi</h3>", unsafe_allow_html=True)
+            for rec in result.get("recommendations", []):
+                st.markdown(f"<div style='background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem;'>👉 {rec}</div>", unsafe_allow_html=True)
+
+def render_analytics():
+    st.markdown("<h1>📈 Analytics Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Skor kesehatan komunitas berdasarkan pendidikan, kesehatan, dan aksesibilitas.</p>", unsafe_allow_html=True)
+    
+    data = get_analytics()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f"<div class='metric-card'><div class='metric-value'>{data['total_citizens_served']:,}</div><div class='metric-label'>Warga Dibantu</div></div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"<div class='metric-card'><div class='metric-value'>{data['total_programs_discovered']:,}</div><div class='metric-label'>Program Ditemukan</div></div>", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"<div class='metric-card'><div class='metric-value'>{data['average_trust_score']}</div><div class='metric-label'>Rata-rata Trust Score</div></div>", unsafe_allow_html=True)
+    with col4:
+        st.markdown(f"<div class='metric-card'><div class='metric-value'>{data['average_success_score']}</div><div class='metric-label'>Rata-rata Success Score</div></div>", unsafe_allow_html=True)
+    
+    st.markdown("<h3 style='margin-top: 2rem;'>📊 Tren Komunitas</h3>", unsafe_allow_html=True)
+    for trend in data.get("community_trends", []):
+        direction_icon = "📈" if trend.get("direction") == "up" else "📉"
+        direction_color = "#2ed573" if trend.get("direction") == "up" else "#ff4757"
+        st.markdown(f"""
+        <div style="background: #16213e; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><strong style="color: white;">{trend['category']}</strong></span>
+                <span style="color: {direction_color};">{direction_icon} {trend['change']}% ({trend['period']})</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<h3 style='margin-top: 2rem;'>🏆 Top Concerns</h3>", unsafe_allow_html=True)
+    for concern in data.get("top_concerns", []):
+        st.markdown(f"""
+        <div style="background: #16213e; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><strong style="color: white;">{concern['issue']}</strong></span>
+                <span style="color: #ffa502;">{concern['count']:,} laporan (+{concern['growth']}%)</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<h3 style='margin-top: 2rem;'>🗺️ Skor Regional</h3>", unsafe_allow_html=True)
+    regions = data.get("regional_scores", {})
+    for region, scores in regions.items():
+        avg_score = sum(scores.values()) / len(scores)
+        st.markdown(f"""
+        <div style="background: #16213e; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><strong style="color: white;">{region}</strong></span>
+                <span style="color: #667eea;">Rata-rata: {avg_score:.0f}/100</span>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; color: #888;">
+                <span>📚 Pendidikan: {scores['education']}</span>
+                <span>🏥 Kesehatan: {scores['health']}</span>
+                <span>🤝 Sosial: {scores['social']}</span>
+                <span>♿ Akses: {scores['accessibility']}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_knowledge_graph():
+    st.markdown("<h1>🔗 Knowledge Graph</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Visualisasi hubungan antara program, dokumen, dan instansi pemerintah.</p>", unsafe_allow_html=True)
+    
+    data = get_knowledge_graph()
+    
+    # Filter controls
+    col1, col2 = st.columns(2)
+    with col1:
+        node_types = ["Semua"] + list(set(n["type"] for n in data["nodes"]))
+        selected_type = st.selectbox("Filter Tipe:", node_types)
+    with col2:
+        search = st.text_input("Cari node:", placeholder="Ketik nama...")
+    
+    filtered_nodes = data["nodes"]
+    if selected_type != "Semua":
+        filtered_nodes = [n for n in filtered_nodes if n["type"] == selected_type]
+    if search:
+        filtered_nodes = [n for n in filtered_nodes if search.lower() in n["label"].lower() or search.lower() in n.get("description", "").lower()]
+    
+    type_colors = {
+        "program": "#667eea",
+        "agency": "#764ba2",
+        "document": "#2ed573",
+        "benefit": "#ffa502",
+        "location": "#ff4757",
+        "requirement": "#1e90ff",
+    }
+    
+    for node in filtered_nodes:
+        color = type_colors.get(node["type"], "#888")
+        st.markdown(f"""
+        <div style="background: #16213e; padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid {color};">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: white;">{node['label']}</strong>
+                    <span class="badge badge-info" style="margin-left: 0.5rem; background: {color};">{node['type']}</span>
+                </div>
+            </div>
+            <p style="color: #888; margin: 0.3rem 0 0; font-size: 0.85rem;">{node.get('description', '')}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<h3 style='margin-top: 2rem;'>🔗 Hubungan Antar Node</h3>", unsafe_allow_html=True)
+    for link in data["links"]:
+        source_node = next((n for n in data["nodes"] if n["id"] == link["source"]), None)
+        target_node = next((n for n in data["nodes"] if n["id"] == link["target"]), None)
+        if source_node and target_node:
+            st.markdown(f"""
+            <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem; font-size: 0.9rem;">
+                <span style="color: #667eea;">{source_node['label']}</span>
+                <span style="color: #888;"> → </span>
+                <span style="color: #ffa502;">{link['label']}</span>
+                <span style="color: #888;"> → </span>
+                <span style="color: #2ed573;">{target_node['label']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+# ─── Main App ─────────────────────────────────────────────────────────────────
+
+def main():
+    render_header()
+    render_sidebar()
+    
+    if "page" not in st.session_state:
+        st.session_state.page = "home"
+    
+    pages = {
+        "home": render_home,
+        "copilot": render_copilot,
+        "action_plan": render_action_plan,
+        "hoax_checker": render_hoax_checker,
+        "policy_simulator": render_policy_simulator,
+        "analytics": render_analytics,
+        "knowledge_graph": render_knowledge_graph,
+    }
+    
+    pages.get(st.session_state.page, render_home)()
+    
+    st.markdown("""
+    <div class="footer">
+        <p>JERNIH OS v1.0.0 — LKS 2026 AI EXHIBITION</p>
+        <p>Built with Responsible AI | Informasi yang Terang, Bukan yang Bising</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
