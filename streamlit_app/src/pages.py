@@ -559,23 +559,26 @@ def render_analytics():
 
     ai_insight = None
     if HAS_AI_API:
-        from src.ai_service import analyze_with_ai
+        from src.ai_service import chat_with_ai
         insight_prompt = (
+            "Kamu adalah analis data JERNIH OS. Selalu respon dalam format JSON dengan type='casual' dan message berisi insight."
+        )
+        insight_data = (
             f"Berdasarkan data analytics berikut, berikan 2-3 insight strategis singkat dalam Bahasa Indonesia:\n"
             f"- Warga dibantu: {data['total_citizens_served']:,}\n"
             f"- Trust score: {data['average_trust_score']}/100\n"
             f"- Tren: Pendidikan +23%, Kesehatan +15%, Bansos +31%, Ketenagakerjaan -8%\n"
             f"- Top concern: PIP ({data['top_concerns'][0]['count']:,}), KK ({data['top_concerns'][1]['count']:,})\n"
             f"- Skor terendah: Papua (rata-rata {sum(data['regional_scores']['Papua'].values())/4:.0f})\n"
-            f"Format: poin-poin dengan emoji, tanpa markdown."
+            f"Gunakan emoji, tanpa markdown, maksimal 3 poin."
         )
-        ai_insight = analyze_with_ai(insight_prompt)
+        ai_insight = chat_with_ai(insight_prompt, insight_data)
 
-    if ai_insight:
+    if ai_insight and ai_insight.get("message"):
         st.markdown(f"""
         <div class="glass-card" style="margin-bottom: 1.5rem;">
             <h3 style="color: #ffa502;">🤖 AI Insight</h3>
-            <p style="color: #ddd;">{ai_insight.get('response', '')}</p>
+            <p style="color: #ddd;">{ai_insight['message']}</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -583,14 +586,14 @@ def render_analytics():
     if HAS_AI_API:
         with st.spinner("Menyiapkan pengalaman..."):
             ai_welcome = chat_with_ai(
-                "Kamu adalah asisten ramah JERNIH OS. Berikan 2-3 kalimat sambutan hangat dalam Bahasa Indonesia yang menekankan kesiapan membantu warga. Jangan gunakan markdown.",
+                "Kamu adalah asisten ramah JERNIH OS. Selalu respon dalam format JSON dengan field type='casual' dan message berisi 2-3 kalimat sambutan hangat dalam Bahasa Indonesia.",
                 "Sapa pengguna dengan hangat dan tawarkan bantuan."
             )
 
-    if ai_welcome:
+    if ai_welcome and ai_welcome.get("message"):
         st.markdown(f"""
         <div class="glass-card" style="margin-bottom: 1.5rem; text-align: left;">
-            <p style="color: #ddd; font-size: 1.1rem;">🤖 {ai_welcome.get('response', '')}</p>
+            <p style="color: #ddd; font-size: 1.1rem;">🤖 {ai_welcome['message']}</p>
         </div>
         """, unsafe_allow_html=True)
 
