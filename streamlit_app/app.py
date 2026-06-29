@@ -194,7 +194,7 @@ import httpx
 OPENROUTER_KEY = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
 HAS_AI_API = bool(OPENROUTER_KEY)
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-AI_MODEL = "google/gemini-2.0-flash-exp:free"
+AI_MODEL = "openai/gpt-4o-mini"
 
 CITIZEN_SYSTEM_PROMPT = f"Anda adalah AI Civic Assistant JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}.\n" + """
 WAJIB: Balas HANYA dengan JSON valid. Mulai langsung dengan { tanpa teks apapun di luar JSON.
@@ -273,9 +273,6 @@ def analyze_with_ai(message: str) -> Optional[dict]:
                 resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
             if resp.status_code in (401, 403):
                 return None
-            if resp.status_code == 402:
-                payload["model"] = "google/gemma-2-9b-it:free"
-                continue
             if resp.status_code == 429:
                 return None
             if resp.status_code != 200:
@@ -334,9 +331,6 @@ def ask_ai_json(system_prompt: str, user_prompt: str) -> Optional[dict]:
                 resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
             if resp.status_code in (401, 403, 429):
                 return None
-            if resp.status_code == 402:
-                payload["model"] = "google/gemma-2-9b-it:free"
-                continue
             if resp.status_code != 200:
                 return None
             data = resp.json()
