@@ -79,14 +79,16 @@ def _call_api(headers: dict, payload: dict) -> str | None:
                 return None
     return None
 
-def chat_with_ai(system_prompt: str, user_message: str) -> dict | None:
+def chat_with_ai(system_prompt: str, user_message: str, history: list = None) -> dict | None:
     if not HAS_AI_API:
         return None
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        for h in history[-6:]:
+            messages.append({"role": h["role"], "content": h["content"]})
+    messages.append({"role": "user", "content": user_message})
     headers = _build_headers()
-    payload = _build_payload([
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message},
-    ])
+    payload = _build_payload(messages)
     raw = _call_api(headers, payload)
     if not raw:
         return None
@@ -95,11 +97,11 @@ def chat_with_ai(system_prompt: str, user_message: str) -> dict | None:
         result = _repair_json(raw)
     return result if result else None
 
-def analyze_with_ai(message: str) -> dict | None:
+def analyze_with_ai(message: str, history: list = None) -> dict | None:
     if not HAS_AI_API:
         return None
     from src.agents import CITIZEN_SYSTEM_PROMPT
-    result = chat_with_ai(CITIZEN_SYSTEM_PROMPT, f"Pertanyaan warga: {message}")
+    result = chat_with_ai(CITIZEN_SYSTEM_PROMPT, f"Pertanyaan warga: {message}", history)
     if not result:
         return None
     resp_type = result.get("type", "analysis")

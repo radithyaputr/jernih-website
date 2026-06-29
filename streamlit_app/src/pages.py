@@ -242,7 +242,8 @@ def render_copilot():
 
         with st.chat_message("assistant"):
             with st.spinner("Menganalisis..."):
-                result = route_analysis(clean_prompt)
+                history = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages[:-1]]
+                result = route_analysis(clean_prompt, history if history else None)
 
                 if isinstance(result, dict) and result.get("type") == "casual":
                     agent_indicator("civic")
@@ -556,6 +557,43 @@ def render_analytics():
         },
     }
 
+    ai_insight = None
+    if HAS_AI_API:
+        from src.ai_service import analyze_with_ai
+        insight_prompt = (
+            f"Berdasarkan data analytics berikut, berikan 2-3 insight strategis singkat dalam Bahasa Indonesia:\n"
+            f"- Warga dibantu: {data['total_citizens_served']:,}\n"
+            f"- Trust score: {data['average_trust_score']}/100\n"
+            f"- Tren: Pendidikan +23%, Kesehatan +15%, Bansos +31%, Ketenagakerjaan -8%\n"
+            f"- Top concern: PIP ({data['top_concerns'][0]['count']:,}), KK ({data['top_concerns'][1]['count']:,})\n"
+            f"- Skor terendah: Papua (rata-rata {sum(data['regional_scores']['Papua'].values())/4:.0f})\n"
+            f"Format: poin-poin dengan emoji, tanpa markdown."
+        )
+        ai_insight = analyze_with_ai(insight_prompt)
+
+    if ai_insight:
+        st.markdown(f"""
+        <div class="glass-card" style="margin-bottom: 1.5rem;">
+            <h3 style="color: #ffa502;">🤖 AI Insight</h3>
+            <p style="color: #ddd;">{ai_insight.get('response', '')}</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    ai_welcome = None
+    if HAS_AI_API:
+        with st.spinner("Menyiapkan pengalaman..."):
+            ai_welcome = chat_with_ai(
+                "Kamu adalah asisten ramah JERNIH OS. Berikan 2-3 kalimat sambutan hangat dalam Bahasa Indonesia yang menekankan kesiapan membantu warga. Jangan gunakan markdown.",
+                "Sapa pengguna dengan hangat dan tawarkan bantuan."
+            )
+
+    if ai_welcome:
+        st.markdown(f"""
+        <div class="glass-card" style="margin-bottom: 1.5rem; text-align: left;">
+            <p style="color: #ddd; font-size: 1.1rem;">🤖 {ai_welcome.get('response', '')}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(f"<div class='metric-card'><div class='metric-value'>{data['total_citizens_served']:,}</div><div class='metric-label'>Warga Dibantu</div></div>", unsafe_allow_html=True)
@@ -633,23 +671,84 @@ def render_knowledge_graph():
         "benefit": "#ffa502", "location": "#ff4757", "requirement": "#1e90ff",
     }
 
-    st.markdown("<h3>🔗 Hubungan Antar Node</h3>", unsafe_allow_html=True)
+    import json as _json
+    nodes_json = _json.dumps(data["nodes"])
+    links_json = _json.dumps(data["links"])
+    colors_json = _json.dumps(type_colors)
 
-    link_html = ""
-    for link in data["links"]:
-        source_node = next((n for n in data["nodes"] if n["id"] == link["source"]), None)
-        target_node = next((n for n in data["nodes"] if n["id"] == link["target"]), None)
-        if source_node and target_node:
-            link_html += f"""
-            <div style="background: #16213e; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 0.3rem; font-size: 0.9rem;">
-                <span style="color: {type_colors.get(source_node['type'], '#667eea')};">● {source_node['label']}</span>
-                <span style="color: #888;"> → </span>
-                <span style="color: #ffa502;">{link['label']}</span>
-                <span style="color: #888;"> → </span>
-                <span style="color: {type_colors.get(target_node['type'], '#2ed573')};">● {target_node['label']}</span>
-            </div>
-            """
-    st.markdown(link_html, unsafe_allow_html=True)
+    st.components.v1.html(f"""
+    <div id="kg-container" style="width:100%;height:600px;background:#0a0a1a;border-radius:16px;border:1px solid #1a1a3e;"></div>
+    <div id="tooltip" style="
+        position:fixed;display:none;background:#16213e;color:#ddd;padding:8px 12px;border-radius:8px;
+        font-size:13px;pointer-events:none;z-index:9999;border:1px solid #667eea;max-width:250px;
+    "></div>
+    <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
+    <script>
+    try {{
+        var nodesData = {nodes_json};
+        var linksData = {links_json};
+        var colors = {colors_json};
+
+        var visNodes = nodesData.map(function(n) {{
+            return {{
+                id: n.id,
+                label: n.label,
+                title: n.description || n.type,
+                color: {{ background: colors[n.type] || '#667eea', border: '#fff', highlight: {{ background: '#ffa502', border: '#fff' }} }},
+                font: {{ color: '#eee', size: 11, face: 'Arial' }},
+                borderWidth: 1,
+                size: n.type === 'program' ? 25 : n.type === 'agency' ? 22 : 18,
+                shape: 'dot',
+            }};;
+        }});
+
+        var visEdges = linksData.map(function(l) {{
+            return {{
+                from: l.source,
+                to: l.target,
+                label: l.label,
+                font: {{ color: '#888', size: 9, align: 'middle' }},
+                color: {{ color: '#333', highlight: '#ffa502' }},
+                width: 1,
+                smooth: {{ type: 'continuous' }},
+            }};;
+        }});
+
+        var container = document.getElementById('kg-container');;
+        var networkData = {{ nodes: new vis.DataSet(visNodes), edges: new vis.DataSet(visEdges) }};
+        var options = {{
+            physics: {{ stabilization: true, barnesHut: {{ gravitationalConstant: -3000, springLength: 150 }} }},
+            interaction: {{ hover: true, tooltipDelay: 200, navigationButtons: true, keyboard: true }},
+            edges: {{ smooth: true }},
+            layout: {{ improvedLayout: true }},
+            groups: Object.keys(colors).reduce(function(acc, k) {{ acc[k] = {{ color: colors[k] }}; return acc; }}, {{}}),
+        }};
+
+        var network = new vis.Network(container, networkData, options);;
+
+        network.on('hoverNode', function(params) {{
+            var node = nodesData.find(function(n) {{ return n.id === params.node; }});;
+            if (node) {{
+                var tip = document.getElementById('tooltip');;
+                tip.innerHTML = '<b>' + node.label + '</b><br><span style="color:#888;">' + (node.description || node.type) + '</span>';;
+                tip.style.display = 'block';;
+            }}
+        }});;
+
+        network.on('blurNode', function() {{
+            document.getElementById('tooltip').style.display = 'none';;
+        }});;
+
+        container.addEventListener('mousemove', function(e) {{
+            var tip = document.getElementById('tooltip');;
+            tip.style.left = (e.clientX + 15) + 'px';;
+            tip.style.top = (e.clientY + 15) + 'px';;
+        }});;
+    }} catch(e) {{
+        document.getElementById('kg-container').innerHTML = '<div style="padding:20px;color:red;">Error: ' + e.message + '</div>';;
+    }}
+    </script>
+    """, height=620)
 
     st.markdown("<h3 style='margin-top: 1.5rem;'>📋 Daftar Node</h3>", unsafe_allow_html=True)
     for node in filtered_nodes:

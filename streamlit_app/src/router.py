@@ -48,21 +48,21 @@ def get_agent_prompt(intent: str) -> str:
     }
     return prompts.get(intent, CITIZEN_SYSTEM_PROMPT)
 
-def smart_route(message: str) -> dict:
+def smart_route(message: str, history: list = None) -> dict:
     intent = detect_intent(message)
     prompt = get_agent_prompt(intent)
-    result = chat_with_ai(prompt, f"Pertanyaan warga: {message}")
+    result = chat_with_ai(prompt, f"Pertanyaan warga: {message}", history)
     if result:
         result["intent"] = intent
         return result
     return {"type": "fallback", "intent": intent, "message": message}
 
-def route_analysis(message: str):
+def route_analysis(message: str, history: list = None):
     from src.ai_service import analyze_with_ai
-    result = analyze_with_ai(message)
+    result = analyze_with_ai(message, history)
     if result:
         return result
-    result = smart_route(message)
+    result = smart_route(message, history)
     if result.get("type") != "fallback":
         return result
     from src.fallback import analyze_situation_fallback, CasualResponse, CopilotResponse
