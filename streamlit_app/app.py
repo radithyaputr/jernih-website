@@ -194,9 +194,9 @@ import httpx
 OPENROUTER_KEY = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
 HAS_AI_API = bool(OPENROUTER_KEY)
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-AI_MODEL = "openai/gpt-4o-mini"
+AI_MODEL = "google/gemini-2.0-flash-exp:free"
 
-CITIZEN_SYSTEM_PROMPT = f"Anda adalah AI Civic Assistant JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}. Presiden Indonesia saat ini adalah Prabowo Subianto.\n" + """
+CITIZEN_SYSTEM_PROMPT = f"Anda adalah AI Civic Assistant JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}.\n" + """
 WAJIB: Balas HANYA dengan JSON valid. Mulai langsung dengan { tanpa teks apapun di luar JSON.
 
 ## ATURAN DETEKSI INTENT:
@@ -862,7 +862,7 @@ Gunakan sumber resmi Indonesia seperti: data.go.id, kemensos.go.id, kominfo.go.i
     }
 
 def generate_action_plan(situation: str) -> dict:
-    ACTION_PLAN_SYSTEM_PROMPT = f"Anda adalah AI Action Plan Generator JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}. Presiden Indonesia saat ini adalah Prabowo Subianto.\n" + """
+    ACTION_PLAN_SYSTEM_PROMPT = f"Anda adalah AI Action Plan Generator JERNIH OS untuk Indonesia. Waktu saat ini adalah {datetime.now().strftime('%d %B %Y')}.\n" + """
 Berdasarkan situasi warga negara Indonesia, buatlah rencana aksi personal yang DETAIL, KONTEKSTUAL, dan SPESIFIK sesuai situasi yang diberikan.
 WAJIB: Balas HANYA dengan JSON valid. Mulai langsung dengan { tanpa teks apapun di luar JSON.
 Format JSON yang harus dikembalikan:
