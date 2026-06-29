@@ -57,9 +57,13 @@ def smart_route(message: str) -> dict:
         return result
     return {"type": "fallback", "intent": intent, "message": message}
 
-def route_analysis(message: str) -> dict:
+def route_analysis(message: str):
     from src.ai_service import analyze_with_ai
     result = analyze_with_ai(message)
     if result:
         return result
-    return smart_route(message)
+    result = smart_route(message)
+    if result.get("type") != "fallback":
+        return result
+    from src.fallback import analyze_situation_fallback, CasualResponse, CopilotResponse
+    return analyze_situation_fallback(message)
