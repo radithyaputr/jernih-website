@@ -4,8 +4,9 @@ from datetime import datetime
 from src.config import VERSION, APP_NAME, TAGLINE, HAS_AI_API
 from src.fallback import (
     analyze_situation_fallback, analyze_hoax_fallback, generate_action_plan_fallback,
-    CasualResponse, CopilotResponse, TrustScore, Source
+    CasualResponse, CopilotResponse, Source
 )
+from src.trust_layer import TrustScore
 from src.router import route_analysis, detect_intent
 from src.ai_service import chat_with_ai
 from src.agents import (
