@@ -129,8 +129,12 @@ GUIDELINES:
 
         client = _get_client()
         if not client:
+            if lang == "id":
+                answer = "Maaf, API key tidak ditemukan. Set OPENAI_API_KEY di Secrets Streamlit Cloud."
+            else:
+                answer = "Sorry, API key not found. Set OPENAI_API_KEY in Streamlit Cloud Secrets."
             return CopilotResponse(
-                answer=f"Maaf, saya sedang mengalami gangguan koneksi. Silakan coba lagi nanti. Pertanyaan Anda: _{query}_" if lang == "id" else f"Sorry, I'm experiencing connection issues. Please try again later. Your question: _{query}_",
+                answer=answer,
                 sources=rag_result.sources,
                 confidence=rag_result.confidence,
                 source_texts=[rag_result.context] if rag_result.context else [],
@@ -159,11 +163,12 @@ GUIDELINES:
                 answer = raw.strip()
             else:
                 raise ValueError("empty response")
-        except Exception:
+        except Exception as e:
+            err = str(e)[:200]
             if lang == "id":
-                answer = f"Maaf, saya sedang mengalami gangguan koneksi. Silakan coba lagi nanti. Pertanyaan Anda: _{query}_"
+                answer = f"Maaf, ada error API: _{err}_. Silakan coba lagi. Pertanyaan Anda: _{query}_"
             else:
-                answer = f"Sorry, I'm experiencing connection issues. Please try again later. Your question: _{query}_"
+                answer = f"Sorry, API error: _{err}_. Please try again. Your question: _{query}_"
 
         return CopilotResponse(
             answer=answer,
