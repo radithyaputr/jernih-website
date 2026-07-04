@@ -1,107 +1,106 @@
-# 🌟 JERNIH OS — Streamlit Deployment
+# 🧠 JERNIH — AI Civic Information Platform
 
-## 🚀 Deploy ke Streamlit Cloud
+**Informasi yang Terang, Bukan yang Bising**
 
-### Cara 1: Deploy Otomatis (via GitHub)
+JERNIH adalah platform AI terintegrasi untuk membantu warga mengakses informasi publik, memverifikasi berita, merencanakan aksi, dan mensimulasikan kebijakan — semuanya berbasis RAG (Retrieval-Augmented Generation) dengan transparansi penuh.
 
-1. **Push folder `streamlit_app/` ke GitHub**
-   ```bash
-   git add streamlit_app/
-   git commit -m "Add Streamlit deployment"
-   git push
-   ```
+---
 
-2. **Buka [share.streamlit.io](https://share.streamlit.io)**
+## ✨ Fitur
 
-3. **Klik "New app"**
-   - Repository: pilih repo ini (`radithyaputr/jernih-project`)
-   - Branch: `main`
-   - Main file path: `streamlit_app/app.py`
+| Fitur | Deskripsi |
+|-------|-----------|
+| 🏠 **Beranda** | Dashboard dengan KPI dampak dan akses cepat ke semua fitur |
+| 🤖 **AI Civic Copilot** | Chatbot berbasis RAG untuk konsultasi layanan publik |
+| 🔍 **Hoax Checker** | Verifikasi berita/klaim dengan confidence score dan sumber |
+| 📋 **Action Plan Generator** | Rencana aksi langkah demi langkah berbasis kebijakan resmi |
+| 📊 **Policy Simulator** | Simulasi dampak kebijakan (ekonomi, sosial, lingkungan) |
+| 🧠 **Knowledge Graph** | Visualisasi interaktif hubungan isu → kebijakan → dampak |
 
-4. **Klik "Deploy"**
+---
 
-5. ✅ **Aplikasi akan live dalam 2-3 menit!**
+## 🚀 Cara Menjalankan
 
-### Cara 2: Deploy Manual (via Streamlit CLI)
-
+### 1. Clone repositori
 ```bash
-# 1. Masuk ke folder streamlit_app
-cd streamlit_app
+git clone https://github.com/radithyaputr/jernih-project.git
+cd jernih-project/streamlit_app
+```
 
-# 2. Install dependencies
+### 2. Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-# 3. Jalankan lokal
+### 3. Setup API Key
+Buat file `.streamlit/secrets.toml`:
+```toml
+OPENAI_API_KEY = "sk-or-v1-..."
+```
+Dapatkan API key gratis di https://openrouter.ai/keys
+
+### 4. Jalankan aplikasi
+```bash
 streamlit run app.py
+```
 
-# 4. Untuk deploy, upload folder ini ke Streamlit Cloud manual
+Aplikasi akan berjalan di `http://localhost:8501`
+
+---
+
+## 📁 Struktur Proyek
+
+```
+streamlit_app/
+├── app.py                          # Main aplikasi (semua halaman)
+├── requirements.txt                # Dependensi Python
+├── .streamlit/
+│   ├── config.toml                 # Konfigurasi tema Streamlit
+│   └── secrets.toml.example        # Template API key
+├── src/
+│   ├── __init__.py
+│   ├── models.py                   # Data models (Source, RAGResult, dll)
+│   ├── utils.py                    # CSS, UI components, helpers
+│   ├── rag_engine.py               # RAG Engine (ChromaDB + OpenAI embeddings)
+│   └── agents.py                   # Agent classes (Civic, Hoax, ActionPlan, Policy)
+├── data/
+│   └── documents/                  # Dokumen sumber untuk RAG (.txt)
+│       ├── program-indonesia-pintar.txt
+│       ├── kartu-indonesia-sehat.txt
+│       ├── bansos-pkh.txt
+│       ├── layanan-dukcapil.txt
+│       └── dtks.txt
+└── README.md
 ```
 
 ---
 
-## 📁 Struktur Folder
+## 🔑 API Key
 
-```
-streamlit_app/
-├── app.py                        # Main application (all-in-one + AI + fallback)
-├── requirements.txt              # Python dependencies
-├── .streamlit/
-│   ├── config.toml               # Streamlit theme & server config
-│   └── secrets.toml.example      # API key template (copy to secrets.toml)
-└── README.md                    # Deployment guide
-```
+Aplikasi ini membutuhkan OpenAI API key (via OpenRouter) untuk:
+- Menjalankan RAG (text-embedding-3-small)
+- Menghasilkan jawaban AI (GPT-4o-mini)
 
-## ⚙️ Fitur yang Tersedia
+Jika API key tidak tersedia, aplikasi akan berjalan dalam mode terbatas.
 
-| Fitur | Halaman | Deskripsi |
-|-------|---------|-----------|
-| 🏠 Beranda | Landing page | Overview dengan metrik dampak |
-| 🤖 AI Civic Copilot | Chat interaktif | Analisis situasi warga (AI + rule-based fallback) |
-| 📋 Action Plan Generator | Form-based | Rencana aksi personal terstruktur |
-| 🔍 Hoax Checker | Text analysis | Verifikasi informasi & deteksi hoaks |
-| 📊 Policy Simulator | Interactive form | Simulasi dampak perubahan kebijakan |
-| 📈 Analytics Dashboard | Dashboard | Skor kesehatan komunitas & regional |
-| 🔗 Knowledge Graph | Filterable list | Hubungan program, dokumen & instansi |
+---
 
-## 🔑 Setup API Key (Agar AI Bisa Jawab General Questions)
+## 🎯 Keunggulan Kompetisi (LKS 2026)
 
-App ini punya **dual-mode**: AI (via OpenRouter) + fallback rule-based.
+1. **Transparansi Penuh** — Setiap jawaban AI menampilkan sumber secara inline (langsung terlihat)
+2. **Confidence Score** — Setiap jawaban dilengkapi skor kepercayaan
+3. **Responsible AI** — System prompt ketat yang mencegah halusinasi
+4. **Dark Theme Premium** — Desain modern dengan aksesibilitas tinggi
+5. **Multi-language** — Toggle Indonesia/English di sidebar
+6. **RAG-based** — Semua jawaban berdasarkan dokumen resmi, bukan generasi bebas
 
-### Jika API key tersedia:
-- AI bisa jawab **pertanyaan umum** ("hari ini hari apa?", "siapa presiden?", "buatkan puisi")
-- Analisis situasi warga jadi lebih akurat dan kontekstual
-- Hoax checker dan action plan juga pake AI
+---
 
-### Jika API key kosong:
-- Otomatis fallback ke **rule-based** (tetap berfungsi penuh untuk 20+ topik layanan publik)
+## 🛠️ Teknologi
 
-### Cara Setup:
-
-**Di Streamlit Cloud:**
-1. Buka app di Streamlit Cloud → **Settings** → **Secrets**
-2. Tambahkan:
-   ```toml
-   OPENAI_API_KEY = "sk-or-v1-..."
-   ```
-3. Get free key: https://openrouter.ai/keys (no credit card, 200 req/min)
-
-**Lokal:**
-```bash
-# Copy example file
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml
-# Edit dengan API key asli
-```
-
-## 🧠 Teknologi
-
-- **Streamlit** — Frontend UI framework
-- **Pure Python** — Backend logic (no FastAPI needed)
-- **OpenRouter AI** — GPT-4o-mini untuk respon cerdas (optional)
-- **Rule-based fallback** — 20+ topik layanan publik Indonesia
-
-## 🔧 Catatan
-
-- Aplikasi ini adalah **all-in-one monolithic app** — backend + frontend dalam satu file
-- Tidak perlu database atau API terpisah
-- Jika API key tidak diset, semua fitur tetap berfungsi via rule-based
-- Cocok untuk demo, exhibition, dan production
+- **Streamlit** — Frontend framework
+- **LangChain** — RAG pipeline
+- **ChromaDB** — Vector database
+- **OpenAI / OpenRouter** — Embeddings + LLM
+- **Plotly + NetworkX** — Knowledge Graph visualization
+- **Python 3.10+**

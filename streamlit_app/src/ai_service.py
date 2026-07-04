@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import base64
 import httpx
 from src.config import (
     OPENROUTER_KEY, HAS_AI_API, OPENROUTER_URL, AI_MODEL,
@@ -96,6 +97,30 @@ def chat_with_ai(system_prompt: str, user_message: str, history: list = None) ->
     if not result:
         result = _repair_json(raw)
     return result if result else None
+
+def chat_with_images(system_prompt: str, text: str, images: list, model: str = None) -> dict | None:
+    if not HAS_AI_API:
+        return None
+    content = [{"type": "text", "text": text}]
+    for img_data in images:
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/{img_data['format']};base64,{img_data['base64']}"}
+        })
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": content},
+    ]
+    headers = _build_headers()
+    payload = _build_payload(messages, model=model)
+    raw = _call_api(headers, payload)
+    if not raw:
+        return None
+    result = _extract_json(raw)
+    if not result:
+        result = _repair_json(raw)
+    return result if result else None
+
 
 def analyze_with_ai(message: str, history: list = None) -> dict | None:
     if not HAS_AI_API:

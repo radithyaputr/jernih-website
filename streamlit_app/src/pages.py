@@ -10,7 +10,7 @@ from src.trust_layer import TrustScore
 from src.router import route_analysis, detect_intent
 from src.ai_service import chat_with_ai
 from src.agents import (
-    POLICY_EXPERT_PROMPT, FACT_CHECKER_PROMPT, DECISION_ENGINE_PROMPT,
+    ACTION_PLAN_PROMPT, POLICY_EXPERT_PROMPT, FACT_CHECKER_PROMPT, DECISION_ENGINE_PROMPT,
     CLIMATE_EXPERT_PROMPT, LEGAL_ASSISTANT_PROMPT, EMERGENCY_ASSISTANT_PROMPT,
 )
 from src.knowledge_base import KNOWLEDGE_GRAPH_DATA
@@ -22,6 +22,7 @@ from src.ui_components import (
 )
 
 _AGENT_PROMPTS = {
+    "action_plan": ACTION_PLAN_PROMPT,
     "policy": POLICY_EXPERT_PROMPT,
     "fact_check": FACT_CHECKER_PROMPT,
     "decision": DECISION_ENGINE_PROMPT,
@@ -297,13 +298,10 @@ def render_action_plan():
         else:
             with st.spinner("Membuat rencana aksi..."):
                 clean_sit = sanitize_input(situation)
-                from src.router import detect_intent
-                intent = detect_intent(clean_sit)
-                prompt = _AGENT_PROMPTS.get(intent, None)
                 result = None
-                if prompt:
+                if HAS_AI_API:
                     from src.ai_service import chat_with_ai
-                    result = chat_with_ai(prompt, f"Situasi warga:\n\n{clean_sit}")
+                    result = chat_with_ai(ACTION_PLAN_PROMPT, f"Situasi warga:\n\n{clean_sit}")
                 if result and all(k in result for k in ["title", "overview", "citizen_success_score"]):
                     pass
                 else:
@@ -370,29 +368,62 @@ def render_hoax_checker():
     st.markdown("<h1>🔍 AI Fact Checker</h1>", unsafe_allow_html=True)
     st.markdown("<p style='color: #888; margin-bottom: 2rem;'>Verifikasi informasi dan deteksi hoaks dengan analisis AI multi-agent.</p>", unsafe_allow_html=True)
 
+    if "hc_images" not in st.session_state:
+        st.session_state.hc_images = []
+
+    text_type = st.selectbox("Tipe:", ["text", "article", "screenshot"])
+
     text = st.text_area("Tempel teks yang ingin diverifikasi:", height=200,
                         placeholder="Tempel berita, pesan WhatsApp, atau informasi yang ingin dicek...")
 
-    col1, col2 = st.columns([3, 1])
-    with col2:
-        text_type = st.selectbox("Tipe:", ["text", "article", "screenshot"])
-    with col1:
-        col1_empty = st.empty()
+    st.markdown("<div style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
+    uploaded = st.file_uploader(
+        "📷 Upload screenshot (opsional) — bisa dari HP/galeri:",
+        type=["png", "jpg", "jpeg", "webp"],
+        accept_multiple_files=True,
+        key="hc_uploader",
+        help="Ambil foto atau pilih dari galeri untuk dicek oleh AI",
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if uploaded:
+        import base64
+        import io as _io
+        st.session_state.hc_images = []
+        for f in uploaded:
+            ext = f.name.rsplit(".", 1)[-1].lower()
+            if ext == "jpg":
+                ext = "jpeg"
+            raw = f.getvalue()
+            b64 = base64.b64encode(raw).decode("utf-8")
+            st.session_state.hc_images.append({"base64": b64, "format": ext, "name": f.name, "raw": raw})
+
+    if st.session_state.hc_images:
+        cols = st.columns(min(len(st.session_state.hc_images), 4))
+        for i, img in enumerate(st.session_state.hc_images):
+            with cols[i % len(cols)]:
+                st.image(img["raw"], width=120, caption=img["name"][:20])
+        if st.button("🗑 Hapus Gambar", key="hc_clear_images", use_container_width=True):
+            st.session_state.hc_images = []
+            st.rerun()
 
     if st.button("Verifikasi", type="primary", use_container_width=True):
-        if not text.strip():
-            st.error("Silakan masukkan teks terlebih dahulu.")
+        if not text.strip() and not st.session_state.hc_images:
+            st.error("Silakan masukkan teks atau unggah gambar terlebih dahulu.")
         else:
             with st.spinner("Menganalisis..."):
-                clean_text = sanitize_input(text)
-                intent = detect_intent(clean_text)
+                clean_text = sanitize_input(text) if text.strip() else ""
                 result = None
                 if HAS_AI_API:
-                    from src.ai_service import chat_with_ai
+                    from src.ai_service import chat_with_ai, chat_with_images
                     from src.agents import FACT_CHECKER_PROMPT
-                    result = chat_with_ai(FACT_CHECKER_PROMPT, f"Teks yang akan diverifikasi (tipe: {text_type}):\n\n{clean_text[:3000]}")
+                    if st.session_state.hc_images:
+                        prompt_text = f"Teks yang akan diverifikasi (tipe: {text_type}):\n\n{clean_text[:3000]}" if clean_text else f"Analisis gambar screenshot (tipe: {text_type}) ini dan berikan fact check."
+                        result = chat_with_images(FACT_CHECKER_PROMPT, prompt_text, st.session_state.hc_images)
+                    else:
+                        result = chat_with_ai(FACT_CHECKER_PROMPT, f"Teks yang akan diverifikasi (tipe: {text_type}):\n\n{clean_text[:3000]}")
                 if not result or not all(k in result for k in ["credibility_score", "verdict"]):
-                    result = analyze_hoax_fallback(clean_text)
+                    result = analyze_hoax_fallback(clean_text if clean_text else "Gambar dianalisis")
 
                 score = result["credibility_score"]
                 if score < 40:

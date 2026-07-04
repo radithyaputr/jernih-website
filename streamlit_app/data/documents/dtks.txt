@@ -1,0 +1,23 @@
+Data Terpadu Kesejahteraan Sosial (DTKS) adalah database yang berisi data sosial ekonomi penduduk Indonesia yang digunakan sebagai acuan untuk program bantuan sosial dan pembangunan. DTKS dikelola oleh Kementerian Sosial RI.
+
+Fungsi DTKS:
+1. Data acuan untuk penyaluran bantuan sosial (PKH, BPNT, BLT)
+2. Data acuan untuk program pendidikan (PIP, KIP)
+3. Data acuan untuk program kesehatan (KIS, PBI)
+4. Data acuan untuk program perumahan
+5. Data acuan untuk program penanggulangan kemiskinan
+
+Cara cek DTKS:
+1. Melalui website cekbansos.kemensos.go.id
+2. Melalui aplikasi Cek Bansos
+3. Melalui kelurahan/desa setempat
+
+Cara daftar DTKS:
+1. Mendaftar ke kelurahan/desa setempat
+2. Melampirkan KK dan KTP
+3. Petugas akan melakukan musyawarah desa/kelurahan
+4. Data diusulkan ke Dinas Sosial
+5. Dinas Sosial melakukan verifikasi dan validasi
+6. Ditetapkan oleh Kemensos
+
+Sumber: Kemensos RI, https://cekbansos.kemensos.go.id

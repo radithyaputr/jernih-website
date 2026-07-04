@@ -1,0 +1,25 @@
+Program Keluarga Harapan (PKH) adalah program bantuan sosial bersyarat kepada keluarga miskin yang terdaftar dalam Data Terpadu Kesejahteraan Sosial (DTKS). PKH bertujuan untuk memutus rantai kemiskinan antargenerasi melalui peningkatan kualitas kesehatan, pendidikan, dan kesejahteraan sosial.
+
+Komponen bantuan PKH:
+1. Ibu hamil/nifas: Rp3.000.000/tahun
+2. Anak usia dini (0-6 tahun): Rp3.000.000/tahun
+3. Anak SD/sederajat: Rp900.000/tahun
+4. Anak SMP/sederajat: Rp1.500.000/tahun
+5. Anak SMA/sederajat: Rp2.000.000/tahun
+6. Penyandang disabilitas: Rp2.400.000/tahun
+7. Lanjut usia 60+ tahun: Rp2.400.000/tahun
+
+Persyaratan PKH:
+1. Terdaftar di DTKS
+2. Memiliki komponen kesejahteraan (ibu hamil, anak sekolah, lansia, disabilitas)
+3. Memenuhi kewajiban kesehatan dan pendidikan
+4. Terdaftar di lembaga pendidikan atau fasilitas kesehatan
+
+Cara daftar PKH:
+1. Mendaftar ke kelurahan/desa setempat
+2. Petugas akan melakukan verifikasi data
+3. Data diusulkan ke Dinas Sosial
+4. Dinas Sosial melakukan validasi
+5. Penetapan penerima oleh Kemensos
+
+Sumber: Kemensos RI, https://pkh.kemensos.go.id
