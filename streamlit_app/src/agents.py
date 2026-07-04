@@ -28,7 +28,7 @@ def _get_client():
     )
 
 
-def _call_llm(system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 500) -> str | None:
+def _call_llm(system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 200) -> str | None:
     client = _get_client()
     if not client:
         return None
@@ -156,7 +156,7 @@ GUIDELINES:
                 model="openai/gpt-4o-mini",
                 messages=messages,
                 temperature=0.7,
-                max_tokens=500,
+                max_tokens=200,
             )
             raw = response.choices[0].message.content
             if raw:
