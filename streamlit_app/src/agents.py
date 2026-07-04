@@ -117,7 +117,7 @@ GUIDELINES:
     def get_system_prompt(self, lang: str = "id") -> str:
         return self.system_prompt_id if lang == "id" else self.system_prompt_en
 
-    def ask(self, query: str, rag_result: RAGResult, lang: str = "id") -> CopilotResponse:
+    def ask(self, query: str, rag_result: RAGResult, lang: str = "id", history: list | None = None) -> CopilotResponse:
         system_prompt = self.get_system_prompt(lang)
         context_block = _format_context(rag_result)
         sources_block = _format_sources(rag_result.sources)
@@ -127,10 +127,39 @@ GUIDELINES:
         else:
             user_msg = f"{context_block}\n\nQuestion: {query}\n\n{sources_block}"
 
-        raw = _call_llm(system_prompt, user_msg)
-        if raw:
-            answer = raw.strip()
-        else:
+        client = _get_client()
+        if not client:
+            return CopilotResponse(
+                answer=f"Maaf, saya sedang mengalami gangguan koneksi. Silakan coba lagi nanti. Pertanyaan Anda: _{query}_" if lang == "id" else f"Sorry, I'm experiencing connection issues. Please try again later. Your question: _{query}_",
+                sources=rag_result.sources,
+                confidence=rag_result.confidence,
+                source_texts=[rag_result.context] if rag_result.context else [],
+            )
+
+        messages = [{"role": "system", "content": system_prompt}]
+
+        if history:
+            for msg in history[-10:]:
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                if role in ("user", "assistant") and content:
+                    messages.append({"role": role, "content": content})
+
+        messages.append({"role": "user", "content": user_msg})
+
+        try:
+            response = client.chat.completions.create(
+                model="openai/gpt-4o-mini",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=500,
+            )
+            raw = response.choices[0].message.content
+            if raw:
+                answer = raw.strip()
+            else:
+                raise ValueError("empty response")
+        except Exception:
             if lang == "id":
                 answer = f"Maaf, saya sedang mengalami gangguan koneksi. Silakan coba lagi nanti. Pertanyaan Anda: _{query}_"
             else:

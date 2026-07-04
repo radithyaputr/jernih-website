@@ -151,7 +151,7 @@ def render_copilot():
             with st.spinner(t("Mencari informasi...", "Searching for information...")):
                 rag = query_rag(prompt)
                 agent = CivicAgent()
-                response = agent.ask(prompt, rag, lang=get_lang())
+                response = agent.ask(prompt, rag, lang=get_lang(), history=st.session_state.messages)
 
                 st.markdown(response.answer)
 
