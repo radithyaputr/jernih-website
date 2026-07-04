@@ -15,3 +15,5 @@ next-env.d.ts
 .vercel
 .env*
 streamlit_app/.streamlit/secrets.toml
+streamlit_app/data/chroma_db/
+*.sqlite3

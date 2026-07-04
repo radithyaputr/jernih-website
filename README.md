@@ -34,7 +34,7 @@ AI Civic Assistant untuk membantu warga Indonesia mengakses layanan publik.
 ## Struktur
 
 ```
-jernih-project/
+jernih-website/
 ├── streamlit_app/
 │   ├── app.py                  # All-in-one app (AI + UI)
 │   ├── requirements.txt        # Dependencies
