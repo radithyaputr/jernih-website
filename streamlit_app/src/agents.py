@@ -421,8 +421,8 @@ GUIDELINES:
                                 confidence=rag_result.confidence or 75.0,
                                 source_texts=[rag_result.context] if rag_result.context else [],
                             )
-                    elif resp.status_code == 429:
-                        last_error = f"rate limited (429) on {model}"
+                    elif resp.status_code in (429, 502):
+                        last_error = f"rate limited ({resp.status_code}) on {model}"
                         time.sleep(5)
                         continue
                     else:
@@ -440,11 +440,6 @@ GUIDELINES:
                     break
 
         fallback = self._generate_fallback_answer(query, lang)
-        try:
-            import streamlit as st
-            st.warning(f"AI API error: {last_error}")
-        except Exception:
-            pass
         return CopilotResponse(
             answer=fallback,
             sources=rag_result.sources,
