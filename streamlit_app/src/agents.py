@@ -311,23 +311,68 @@ def _format_sources(sources: list[Source]) -> str:
     return "\n".join(lines)
 
 
+def _build_search_queries(query: str) -> list[str]:
+    q = query.lower()
+    queries = [query]
+    if "presiden" in q or "president" in q:
+        if "amerika" in q or "as" in q or "united states" in q:
+            queries.append("current president of the United States 2025 2026")
+        elif "indonesia" in q:
+            queries.append("Presiden Indonesia 2025 2026 Prabowo Subianto")
+        elif "rusia" in q or "russia" in q:
+            queries.append("President of Russia 2025 2026")
+        elif "prancis" in q or "france" in q:
+            queries.append("President of France 2025 2026")
+        else:
+            queries.append(f"current president of {query.replace('presiden','').replace('president','').strip()} 2025")
+    if "gubernur" in q:
+        queries.append(f"{query} 2025 2026")
+    return queries
+
+
 def web_search(query: str, max_results: int = 4) -> str:
-    """Search DuckDuckGo for current info. Returns formatted string or empty."""
-    try:
-        from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-        if not results:
-            return ""
-        parts = []
-        for i, r in enumerate(results, 1):
-            title = r.get("title", "")
-            snippet = r.get("body", "")
-            link = r.get("href", "")
-            parts.append(f"[{i}] {title}\n{snippet}\nSumber: {link}")
-        return "\n\n".join(parts)
-    except Exception:
-        return ""
+    """Search DuckDuckGo + Wikipedia for current info. Returns formatted string or empty."""
+    queries = _build_search_queries(query)
+    seen = set()
+    parts = []
+
+    for q in queries:
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                results = list(ddgs.text(q, max_results=max_results))
+            for r in results:
+                title = r.get("title", "")
+                snippet = r.get("body", "")
+                link = r.get("href", "")
+                key = title[:50]
+                if key not in seen and snippet.strip():
+                    seen.add(key)
+                    parts.append(f"[{len(parts)+1}] {title}\n{snippet}\nSumber: {link}")
+                    if len(parts) >= 4:
+                        break
+        except Exception:
+            continue
+        if len(parts) >= 4:
+            break
+
+    # Fallback: Wikipedia untuk fakta presiden
+    if not parts and ("presiden" in query.lower() or "president" in query.lower()):
+        try:
+            import httpx
+            wiki_q = query.replace("siapa", "").replace("sekarang", "").replace("saat ini", "").strip()
+            wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={wiki_q}&format=json&srlimit=3"
+            resp = httpx.get(wiki_url, timeout=10)
+            data = resp.json()
+            for item in data.get("query", {}).get("search", [])[:2]:
+                title = item.get("title", "")
+                snippet = item.get("snippet", "").replace("<span class=\"searchmatch\">", "**").replace("</span>", "**")
+                if title and snippet:
+                    parts.append(f"[{len(parts)+1}] {title}\n{snippet}\nSumber: Wikipedia")
+        except Exception:
+            pass
+
+    return "\n\n".join(parts) if parts else ""
 
 
 class CivicAgent:
@@ -353,7 +398,7 @@ PEMBARUAN DATA INDONESIA 2024-2026:
 - Gubernur Jakarta: Pramono Anung. Gubernur Jawa Barat: Dedi Mulyadi.
 - Ibu Kota Nusantara (IKN) di Kaltim sedang dibangun sebagai ibu kota baru.
 
-INSTRUKSI KHUSUS: Jika ada [WEB SEARCH RESULTS] di pertanyaan, WAJIB gunakan itu sebagai jawaban. Abaikan semua pengetahuan lama Anda. Hasil web adalah fakta terkini."""
+INSTRUKSI KHUSUS: Jika ada [WEB SEARCH RESULTS], jawab PERTAMA dari hasil web itu. HASIL WEB LEBIH BENAR daripada pengetahuan Anda. Contoh: jika web bilang "Trump presiden" tapi hafalan Anda bilang "Biden", jawab "Trump" karena web LEBIH BARU. Jangan pernah jawab "saya tidak punya konteks" jika ada hasil web."""
         self.system_prompt_en = SYSTEM_PROMPT_CORE_EN + """
 
 You are the AI Civic Copilot of the JERNIH platform. Your personality: friendly, helpful, and professional.
