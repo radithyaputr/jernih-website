@@ -17,7 +17,7 @@ OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 
 def get_embeddings():
     try:
-        api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+        api_key = os.environ.get("OPENAI_API_KEY") or st.secrets["OPENAI_API_KEY"]
     except Exception:
         api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
