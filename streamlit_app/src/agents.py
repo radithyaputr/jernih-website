@@ -398,6 +398,7 @@ GUIDELINES:
         messages.append({"role": "user", "content": user_msg})
 
         models_to_try = [FREE_CHAT_MODEL, FREE_CHAT_MODEL_FALLBACK]
+        last_error = ""
 
         for model in models_to_try:
             payload = {
@@ -406,7 +407,7 @@ GUIDELINES:
                 "temperature": 0.7,
                 "max_tokens": 1500,
             }
-            for attempt in range(3):
+            for attempt in range(2):
                 try:
                     with httpx.Client(timeout=45.0) as http:
                         resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
@@ -421,17 +422,29 @@ GUIDELINES:
                                 source_texts=[rag_result.context] if rag_result.context else [],
                             )
                     elif resp.status_code == 429:
+                        last_error = f"rate limited (429) on {model}"
                         time.sleep(5)
                         continue
                     else:
+                        try:
+                            err_detail = resp.text[:200] if resp.text else "no body"
+                        except Exception:
+                            err_detail = "could not read body"
+                        last_error = f"{model} → {resp.status_code}: {err_detail}"
                         break
-                except Exception:
-                    if attempt < 2:
+                except Exception as e:
+                    last_error = f"{model} → Exception: {type(e).__name__}: {e}"
+                    if attempt < 1:
                         time.sleep(3)
                         continue
                     break
 
         fallback = self._generate_fallback_answer(query, lang)
+        try:
+            import streamlit as st
+            st.warning(f"AI API error: {last_error}")
+        except Exception:
+            pass
         return CopilotResponse(
             answer=fallback,
             sources=rag_result.sources,
