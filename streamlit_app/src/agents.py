@@ -55,6 +55,8 @@ def _or_request(model: str, api_key: str, headers: dict, payload: dict) -> tuple
                 content = data["choices"][0].get("message", {}).get("content", "")
                 if content and content.strip():
                     return content.strip(), False
+        elif resp.status_code == 429:
+            return None, True
         elif resp.status_code == 502:
             err_body = resp.json() if resp.text else {}
             if "ResourceExhausted" in str(err_body):
@@ -401,25 +403,30 @@ GUIDELINES:
                 "temperature": 0.7,
                 "max_tokens": 1500,
             }
-            try:
-                with httpx.Client(timeout=20.0) as http:
-                    resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    raw = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                    if raw and raw.strip():
-                        return CopilotResponse(
-                            answer=raw.strip(),
-                            sources=rag_result.sources,
-                            confidence=rag_result.confidence or 75.0,
-                            source_texts=[rag_result.context] if rag_result.context else [],
-                        )
-            except Exception:
-                if model == models_to_try[-1]:
+            for attempt in range(3):
+                try:
+                    with httpx.Client(timeout=45.0) as http:
+                        resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        raw = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        if raw and raw.strip():
+                            return CopilotResponse(
+                                answer=raw.strip(),
+                                sources=rag_result.sources,
+                                confidence=rag_result.confidence or 75.0,
+                                source_texts=[rag_result.context] if rag_result.context else [],
+                            )
+                    elif resp.status_code == 429:
+                        time.sleep(5)
+                        continue
+                    else:
+                        break
+                except Exception:
+                    if attempt < 2:
+                        time.sleep(3)
+                        continue
                     break
-                continue
-            if model == models_to_try[-1]:
-                break
 
         fallback = self._generate_fallback_answer(query, lang)
         return CopilotResponse(
