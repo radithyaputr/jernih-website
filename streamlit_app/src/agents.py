@@ -371,6 +371,19 @@ GUIDELINES:
         else:
             user_msg = f"{context_block}\n\nQuestion: {query}\n\n{sources_block}"
 
+        full_prompt = f"{system_prompt}\n\n{user_msg}"
+
+        # 1. Try Gemini API directly (Google API, may have reset quota)
+        gemini_text = _call_gemini(system_prompt, user_msg, temperature=0.7, max_tokens=1500)
+        if gemini_text:
+            return CopilotResponse(
+                answer=gemini_text,
+                sources=rag_result.sources,
+                confidence=rag_result.confidence or 75.0,
+                source_texts=[rag_result.context] if rag_result.context else [],
+            )
+
+        # 2. Try OpenRouter (Nemotron + fallbacks)
         api_key = _get_api_key()
         if not api_key:
             fallback = self._generate_fallback_answer(query, lang)
@@ -397,8 +410,10 @@ GUIDELINES:
                     messages.append({"role": role, "content": str(content)})
         messages.append({"role": "user", "content": user_msg})
 
-        models_to_try = [FREE_CHAT_MODEL, FREE_CHAT_MODEL_FALLBACK]
-        last_error = ""
+        models_to_try = [
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "google/gemini-2.0-flash-exp:free",
+        ]
 
         for model in models_to_try:
             payload = {
@@ -407,9 +422,9 @@ GUIDELINES:
                 "temperature": 0.7,
                 "max_tokens": 1500,
             }
-            for attempt in range(2):
+            for attempt in range(3):
                 try:
-                    with httpx.Client(timeout=45.0) as http:
+                    with httpx.Client(timeout=30.0) as http:
                         resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
@@ -422,20 +437,13 @@ GUIDELINES:
                                 source_texts=[rag_result.context] if rag_result.context else [],
                             )
                     elif resp.status_code in (429, 502):
-                        last_error = f"rate limited ({resp.status_code}) on {model}"
-                        time.sleep(5)
+                        time.sleep(10)
                         continue
                     else:
-                        try:
-                            err_detail = resp.text[:200] if resp.text else "no body"
-                        except Exception:
-                            err_detail = "could not read body"
-                        last_error = f"{model} → {resp.status_code}: {err_detail}"
                         break
-                except Exception as e:
-                    last_error = f"{model} → Exception: {type(e).__name__}: {e}"
-                    if attempt < 1:
-                        time.sleep(3)
+                except Exception:
+                    if attempt < 2:
+                        time.sleep(5)
                         continue
                     break
 
