@@ -73,12 +73,14 @@ def render_sidebar():
             ("🧠", t("Knowledge Graph", "Knowledge Graph"), "graph"),
             ("📸", t("Smart Scanner", "Smart Scanner"), "scanner"),
             ("🗺️", t("Predictive Map", "Predictive Map"), "map"),
+            ("🧠", t("Tentang JERNIH", "About JERNIH"), "about"),
         ]
 
         for icon, label, key in menu_items:
-            if key in ("scanner", "map"):
+            if key in ("scanner", "map", "about"):
+                page_map = {"scanner": "pages/06_Smart_Scanner.py", "map": "pages/07_Predictive_Map.py", "about": "pages/08_About.py"}
                 if st.button(f"{icon} {label}", key=f"nav_{key}", use_container_width=True):
-                    st.switch_page(f"pages/06_Smart_Scanner.py" if key == "scanner" else "pages/07_Predictive_Map.py")
+                    st.switch_page(page_map[key])
                 continue
             is_active = st.session_state.page == key
             if st.button(
