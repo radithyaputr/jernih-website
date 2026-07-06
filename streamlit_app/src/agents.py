@@ -311,6 +311,25 @@ def _format_sources(sources: list[Source]) -> str:
     return "\n".join(lines)
 
 
+def web_search(query: str, max_results: int = 4) -> str:
+    """Search DuckDuckGo for current info. Returns formatted string or empty."""
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+        if not results:
+            return ""
+        parts = []
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "")
+            snippet = r.get("body", "")
+            link = r.get("href", "")
+            parts.append(f"[{i}] {title}\n{snippet}\nSumber: {link}")
+        return "\n\n".join(parts)
+    except Exception:
+        return ""
+
+
 class CivicAgent:
     def __init__(self):
         self.system_prompt_id = SYSTEM_PROMPT_CORE + """
@@ -451,10 +470,17 @@ INDONESIA UPDATE 2024-2026:
         context_block = _format_context(rag_result)
         sources_block = _format_sources(rag_result.sources)
 
-        if lang == "id":
-            user_msg = f"{context_block}\n\nPertanyaan: {query}\n\n{sources_block}"
+        # — Web search untuk info terkini —
+        web_results = web_search(query)
+        if web_results:
+            web_section = f"\n\n--- HASIL PENCARIAN WEB ---\n{web_results}\n---"
         else:
-            user_msg = f"{context_block}\n\nQuestion: {query}\n\n{sources_block}"
+            web_section = ""
+
+        if lang == "id":
+            user_msg = f"{context_block}\n\nPertanyaan: {query}\n\n{sources_block}{web_section}"
+        else:
+            user_msg = f"{context_block}\n\nQuestion: {query}\n\n{sources_block}{web_section}"
 
         # 1. Try Groq (free, generous rate limits, OpenAI-compatible)
         groq_text = _call_groq(system_prompt, user_msg, temperature=0.7, max_tokens=1500)
