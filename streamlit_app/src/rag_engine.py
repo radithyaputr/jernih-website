@@ -16,15 +16,22 @@ OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 
 
 def get_embeddings():
-    api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+    try:
+        api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+    except Exception:
+        api_key = os.environ.get("OPENAI_API_KEY", "")
     if not api_key:
         return None
-    return OpenAIEmbeddings(
-        model="text-embedding-3-small",
-        openai_api_key=api_key,
-        openai_api_base=OPENROUTER_BASE,
-        default_headers={"HTTP-Referer": "https://jernih.app", "X-Title": "JERNIH"},
-    )
+    try:
+        return OpenAIEmbeddings(
+            model="text-embedding-3-small",
+            openai_api_key=api_key,
+            openai_api_base=OPENROUTER_BASE,
+            default_headers={"HTTP-Referer": "https://jernih.app", "X-Title": "JERNIH"},
+        )
+    except Exception:
+        return None
+
 
 
 @st.cache_resource

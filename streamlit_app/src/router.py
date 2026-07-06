@@ -1,12 +1,19 @@
 import re
 from src.config import HAS_AI_API
 from src.ai_service import chat_with_ai
-from src.agents import (
-    CITIZEN_SYSTEM_PROMPT, POLICY_EXPERT_PROMPT, FACT_CHECKER_PROMPT,
-    DECISION_ENGINE_PROMPT, CLIMATE_EXPERT_PROMPT,
-    LEGAL_ASSISTANT_PROMPT, EMERGENCY_ASSISTANT_PROMPT,
-)
 from src.security import sanitize_input
+
+CITIZEN_SYSTEM_PROMPT = """Anda adalah JERNIH, asisten AI Civic Copilot. Jawab pertanyaan warga dengan ramah, jelas, dan informatif.
+Untuk pertanyaan umum (sapaan, definisi, fakta), jawab langsung menggunakan pengetahuan Anda.
+Untuk pertanyaan tentang layanan publik, gunakan konteks yang tersedia jika ada.
+JANGAN pernah kembalikan JSON untuk pertanyaan percakapan biasa - hanya kembalikan teks biasa yang natural."""
+
+POLICY_EXPERT_PROMPT = CITIZEN_SYSTEM_PROMPT + "\n\nAnda adalah analis kebijakan publik yang ahli."
+FACT_CHECKER_PROMPT = CITIZEN_SYSTEM_PROMPT + "\n\nAnda adalah pemeriksa fakta yang teliti."
+DECISION_ENGINE_PROMPT = CITIZEN_SYSTEM_PROMPT + "\n\nAnda adalah mesin pengambil keputusan."
+CLIMATE_EXPERT_PROMPT = CITIZEN_SYSTEM_PROMPT + "\n\nAnda adalah ahli lingkungan dan iklim."
+LEGAL_ASSISTANT_PROMPT = CITIZEN_SYSTEM_PROMPT + "\n\nAnda adalah asisten hukum."
+EMERGENCY_ASSISTANT_PROMPT = CITIZEN_SYSTEM_PROMPT + "\n\nAnda adalah asisten penanganan darurat."
 
 def detect_intent(message: str) -> str:
     m = message.lower().strip()

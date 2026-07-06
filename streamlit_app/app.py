@@ -1,6 +1,12 @@
 import os
 os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
+import re
 import streamlit as st
 from datetime import datetime
 
@@ -52,9 +58,15 @@ def render_sidebar():
             ("📋", t("Action Plan Generator", "Action Plan Generator"), "action"),
             ("📊", t("Policy Simulator", "Policy Simulator"), "policy"),
             ("🧠", t("Knowledge Graph", "Knowledge Graph"), "graph"),
+            ("📸", t("Smart Scanner", "Smart Scanner"), "scanner"),
+            ("🗺️", t("Predictive Map", "Predictive Map"), "map"),
         ]
 
         for icon, label, key in menu_items:
+            if key in ("scanner", "map"):
+                if st.button(f"{icon} {label}", key=f"nav_{key}", use_container_width=True):
+                    st.switch_page(f"pages/06_Smart_Scanner.py" if key == "scanner" else "pages/07_Predictive_Map.py")
+                continue
             is_active = st.session_state.page == key
             if st.button(
                 f"{icon} {label}",
@@ -189,40 +201,254 @@ def render_hoax():
         placeholder=t("Contoh: Pemerintah akan memberikan bantuan Rp10 juta untuk semua warga...", "Example: The government will provide Rp10 million assistance to all citizens..."),
     )
 
-    if st.button(t("🔍 Verifikasi", "🔍 Verify"), type="primary", use_container_width=True):
+    col_check, col_clear = st.columns([3, 1])
+    with col_check:
+        verify_clicked = st.button(t("🔍 Verifikasi dengan AI", "🔍 Verify with AI"), type="primary", use_container_width=True)
+    with col_clear:
+        if st.button(t("🗑️ Hapus", "🗑️ Clear"), use_container_width=True):
+            st.rerun()
+
+    if verify_clicked:
         claim = claim.strip()
         if not claim:
             st.warning(t("Silakan masukkan klaim terlebih dahulu.", "Please enter a claim first."))
         else:
-            with st.spinner(t("Menganalisis klaim...", "Analyzing claim...")):
+            is_url = bool(re.match(r'https?://\S+', claim))
+            status_msg = t("🌐 Mengambil konten berita + AI menganalisis...", "🌐 Fetching news + AI analyzing...") if is_url else t("🤖 JERNIH AI sedang menganalisis...", "🤖 JERNIH AI analyzing...")
+            with st.spinner(status_msg):
                 rag = query_rag(claim)
                 agent = HoaxAgent()
                 result = agent.check(claim, rag, lang=get_lang())
 
                 status = result.get("status", "menyesatkan")
-                explanation = result.get("explanation", "")
-                confidence = result.get("confidence", 50)
-                sources = result.get("sources", [])
+                summary = result.get("summary", "")
+                detailed = result.get("detailed_analysis", "")
+                confidence = min(max(result.get("confidence", 50), 0), 100)
+                claims_breakdown = result.get("claims_breakdown", [])
+                indicators = result.get("suspicious_indicators", [])
+                sources_comp = result.get("sources_comparison", [])
+                recommendations = result.get("recommendations", [])
+                risk_level = result.get("risk_level", "sedang")
+                spread = result.get("spread_potential", "sedang")
+                fact_checks = result.get("fact_checks", [])
+                raw_sources = result.get("sources", [])
 
-                st.markdown("<div style='margin: 1rem 0;'>", unsafe_allow_html=True)
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-                    render_status_badge(status)
-                    st.markdown("</div>", unsafe_allow_html=True)
-                with col2:
-                    render_confidence_bar(confidence)
+                fetched_url = result.get("_fetched_url", "")
+                fetched_preview = result.get("_fetched_content_preview", "")
+
+                source_objs = [Source(title=s) for s in raw_sources]
+                for sc in sources_comp:
+                    name = sc.get("source", "")
+                    if name and not any(s.title == name for s in source_objs):
+                        source_objs.append(Source(title=name))
+                if fetched_url and not any(s.title == fetched_url for s in source_objs):
+                    source_objs = [Source(title=fetched_url)] + source_objs
+
+            # ─── Result Container ───
+            result_placeholder = st.container()
+            _lang = get_lang()
+            with result_placeholder:
+                st.markdown("""<div class="verify-animation">""", unsafe_allow_html=True)
+
+                # ── Row 1: Verdict Card + Score Gauge ──
+                vcol1, vcol2 = st.columns([3, 2])
+                with vcol1:
+                    cls_map = {"benar": "true", "true": "true", "fakta": "true",
+                               "menyesatkan": "misleading", "misleading": "misleading",
+                               "hoaks": "hoax", "hoax": "hoax", "salah": "hoax"}
+                    vcls = cls_map.get(status.lower(), "misleading")
+                    icon_map = {"true": "✅", "misleading": "⚠️", "hoax": "❌"}
+                    label_map = {"true": "INFORMASI TERVERIFIKASI", "misleading": "INFORMASI MENYESATKAN", "hoax": "HOAKS TERDETEKSI"}
+                    st.markdown(f"""
+                    <div class="verdict-card verdict-{vcls}">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="verdict-icon">{icon_map.get(vcls, "⚪")}</span>
+                            <div>
+                                <div class="verdict-label">{label_map.get(vcls, "TIDAK DIKETAHUI")}</div>
+                                <div class="verdict-sub">{t('Hasil verifikasi AI JERNIH', 'JERNIH AI verification result')}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; color: rgba(255,255,255,0.7); font-size: 0.95rem; line-height: 1.6;">
+                            {summary}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                with vcol2:
+                    gauge_color = "#2ed573" if confidence >= 70 else "#ffa502" if confidence >= 40 else "#ff4757"
+                    circumference = 2 * 3.14159 * 62
+                    offset = circumference - (confidence / 100) * circumference
+                    st.markdown(f"""
+                    <div class="gauge-container">
+                        <svg class="gauge-svg" width="160" height="160" viewBox="0 0 160 160">
+                            <circle class="gauge-bg" cx="80" cy="80" r="62"/>
+                            <circle class="gauge-fill" cx="80" cy="80" r="62"
+                                stroke="{gauge_color}"
+                                stroke-dasharray="{circumference}"
+                                stroke-dashoffset="{offset}"/>
+                        </svg>
+                        <div class="gauge-center">
+                            <div class="score">{confidence:.0f}%</div>
+                            <div class="label">{t('Keyakinan AI', 'AI Confidence')}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # Risk + Spread badges
+                    risk_icon = {"tinggi": "🔴", "sedang": "🟡", "rendah": "🟢", "high": "🔴", "medium": "🟡", "low": "🟢"}
+                    spread_icon = {"tinggi": "📢", "sedang": "🔊", "rendah": "🔈", "high": "📢", "medium": "🔊", "low": "🔈"}
+                    risk_cls = {"tinggi": "risk-high", "sedang": "risk-medium", "rendah": "risk-low",
+                                "high": "risk-high", "medium": "risk-medium", "low": "risk-low"}
+                    st.markdown(f"""
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.8rem; flex-wrap: wrap;">
+                        <span class="risk-badge {risk_cls.get(risk_level.lower(), 'risk-medium')}">
+                            {risk_icon.get(risk_level.lower(), '🟡')} {t('Risiko', 'Risk')}: {risk_level.upper()}
+                        </span>
+                        <span class="risk-badge {risk_cls.get(spread.lower(), 'risk-medium')}">
+                            {spread_icon.get(spread.lower(), '🔊')} {t('Sebaran', 'Spread')}: {spread.upper()}
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
                 st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("<br>", unsafe_allow_html=True)
 
-                st.markdown(f"""
-                <div class="glass-card" style="padding: 1rem; margin: 1rem 0;">
-                    <p style="color: rgba(255,255,255,0.8); margin: 0; line-height: 1.6;">{explanation}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                # ── Row 2: Detailed Analysis ──
+                if detailed:
+                    with st.expander(t("📖 Lihat Analisis Detail", "📖 See Detailed Analysis"), expanded=True):
+                        st.markdown(f"<div style='color: rgba(255,255,255,0.8); line-height: 1.7;'>{detailed}</div>", unsafe_allow_html=True)
 
-                source_objs = [Source(title=s) for s in sources]
-                render_sources_inline(source_objs, label=t("sumber rujukan untuk verifikasi ini", "reference sources for this verification"))
-                render_sources_expander(source_objs, [rag.context] if rag.context else [])
+                # ── Row 3: Fetched URL Content ──
+                if fetched_url and fetched_preview:
+                    with st.expander(t("🌐 Konten Artikel yang Diekstrak", "🌐 Extracted Article Content"), expanded=False):
+                        st.markdown(f'<div style="color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-bottom: 0.5rem;">{t("Sumber", "Source")}: <a href="{fetched_url}" target="_blank" style="color: #a78bfa;">{fetched_url}</a></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; color: rgba(255,255,255,0.7); font-size: 0.85rem; line-height: 1.6; max-height: 300px; overflow-y: auto;"><pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">{fetched_preview}</pre></div>', unsafe_allow_html=True)
+                    st.markdown('<div style="margin: 0.5rem 0; padding: 0.5rem 1rem; background: rgba(102,126,234,0.06); border-radius: 12px; border: 1px solid rgba(102,126,234,0.15); color: rgba(255,255,255,0.6); font-size: 0.8rem;">🌐 ' + t('JERNIH berhasil mengekstrak konten artikel untuk analisis AI yang lebih akurat.', 'JERNIH successfully extracted article content for more accurate AI analysis.') + '</div>', unsafe_allow_html=True)
+
+                # ── Row 4: Claims Breakdown ──
+                if claims_breakdown:
+                    st.markdown('<div class="hoax-section">🔬 ' + t('Pemeriksaan Per Bagian Klaim', 'Claim Breakdown Analysis') + '</div>', unsafe_allow_html=True)
+                    for item in claims_breakdown:
+                        c = item.get("claim", "")
+                        v = item.get("verdict", "")
+                        ex = item.get("explanation", "")
+                        v_icon = {"benar": "✅", "salah": "❌", "tidak_terverifikasi": "❓",
+                                  "true": "✅", "false": "❌", "unverified": "❓",
+                                  "fakta": "✅", "hoaks": "❌"}.get(v.lower(), "❓")
+                        c_map = {"benar": "verdict-true", "true": "verdict-true", "fakta": "verdict-true",
+                                 "salah": "verdict-hoax", "false": "verdict-hoax", "hoaks": "verdict-hoax",
+                                 "tidak_terverifikasi": "verdict-misleading", "unverified": "verdict-misleading"}
+                        c_cls = c_map.get(v.lower(), "verdict-misleading")
+                        st.markdown(f"""
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 0.8rem 1rem; margin: 0.4rem 0; border: 1px solid rgba(255,255,255,0.06);">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                                <span>{v_icon}</span>
+                                <span style="color: #E5E7EB; font-weight: 500;">{c}</span>
+                                <span class="status-badge {c_cls}" style="margin-left: auto;">{v.upper()}</span>
+                            </div>
+                            <div style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-left: 1.8rem;">{ex}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # ── Row 4: Suspicious Indicators ──
+                if indicators and any(i.strip() for i in indicators):
+                    is_safe = status.lower() in ("benar", "true", "fakta")
+                    st.markdown('<div class="hoax-section">🔎 ' + t('Indikator yang Terdeteksi', 'Detected Indicators') + '</div>', unsafe_allow_html=True)
+                    tags = " ".join(
+                        f'<span class="indicator-tag{" indicator-tag-safe" if is_safe else ""}">{i}</span>'
+                        for i in indicators if i.strip()
+                    )
+                    st.markdown(f'<div style="margin: 0.5rem 0;">{tags}</div>', unsafe_allow_html=True)
+
+                # ── Row 5: Source Comparison ──
+                if sources_comp:
+                    st.markdown('<div class="hoax-section">📚 ' + t('Perbandingan Sumber', 'Source Comparison') + '</div>', unsafe_allow_html=True)
+                    align_icon = {"mendukung": "✅", "bertentangan": "❌", "netral": "➖",
+                                  "supports": "✅", "contradicts": "❌", "neutral": "➖"}
+                    align_cls = {"mendukung": "alignment-support", "bertentangan": "alignment-contradict",
+                                 "supports": "alignment-support", "contradicts": "alignment-contradict",
+                                 "netral": "alignment-neutral", "neutral": "alignment-neutral"}
+                    for sc in sources_comp:
+                        sname = sc.get("source", "")
+                        salign = sc.get("alignment", "netral").lower()
+                        sexcerpt = sc.get("excerpt", "")
+                        surl = sc.get("url", "")
+                        st.markdown(f"""
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 0.7rem 1rem; margin: 0.4rem 0; border: 1px solid rgba(255,255,255,0.06);">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>{align_icon.get(salign, '➖')}</span>
+                                <span style="color: #E5E7EB; font-weight: 500;">{sname}</span>
+                                <span class="{align_cls.get(salign, '')}" style="margin-left: auto; font-size: 0.8rem; font-weight: 600;">{salign.upper()}</span>
+                            </div>
+                            {f'<div style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 0.3rem; margin-left: 1.8rem; font-style: italic;">{sexcerpt}</div>' if sexcerpt else ''}
+                            {f'<div style="margin-top: 0.3rem; margin-left: 1.8rem;"><a href="{surl}" target="_blank" style="color: #a78bfa; font-size: 0.8rem; text-decoration: none;">{surl}</a></div>' if surl else ''}
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # ── Row 6: Fact Checks ──
+                if fact_checks:
+                    st.markdown('<div class="hoax-section">📋 ' + t('Fakta vs Klaim', 'Fact vs Claim') + '</div>', unsafe_allow_html=True)
+                    for fc in fact_checks:
+                        fc_claim = fc.get("claim", "")
+                        fc_actual = fc.get("actual", "")
+                        fc_status = fc.get("status", "")
+                        fc_icon = {"benar": "✅", "salah": "❌", "tidak_terverifikasi": "❓",
+                                   "true": "✅", "false": "❌", "unverified": "❓"}
+                        st.markdown(f"""
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 0.7rem 1rem; margin: 0.4rem 0; border-left: 3px solid {'#2ed573' if fc_status in ('benar','true') else '#ff4757' if fc_status in ('salah','false') else '#ffa502'};">
+                            <div style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-bottom: 0.2rem;">{t('Klaim', 'Claim')}:</div>
+                            <div style="color: #E5E7EB;">{fc_claim}</div>
+                            <div style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin: 0.4rem 0 0.2rem 0;">{t('Fakta', 'Fact')}:</div>
+                            <div style="color: #E5E7EB;">{fc_actual}</div>
+                            <div style="margin-top: 0.4rem;"><span style="font-size: 0.8rem;">{fc_icon.get(fc_status,"")} {fc_status.upper()}</span></div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # ── Row 7: Recommendations ──
+                if recommendations:
+                    st.markdown('<div class="hoax-section">💡 ' + t('Rekomendasi', 'Recommendations') + '</div>', unsafe_allow_html=True)
+                    for i, rec in enumerate(recommendations, 1):
+                        st.markdown(f"""
+                        <div style="display: flex; gap: 0.5rem; margin: 0.3rem 0; color: rgba(255,255,255,0.7);">
+                            <span style="color: #a78bfa;">{i}.</span>
+                            <span>{rec}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # ── Row 8: Sources ──
+                if source_objs:
+                    render_sources_inline(source_objs, label=t("sumber rujukan untuk verifikasi ini", "reference sources for this verification"))
+                    render_sources_expander(source_objs, [rag.context] if rag.context else [])
+
+                # ── Row 9: Export ──
+                export_text = f"""JERNIH AI - Hasil Verifikasi Hoax
+{'='*40}
+Status: {status.upper()}
+Confidence: {confidence:.0f}%
+Risk Level: {risk_level.upper()}
+Spread Potential: {spread.upper()}
+
+Ringkasan:
+{summary}
+
+Analisis Detail:
+{detailed}
+
+Rekomendasi:
+{chr(10).join(f'- {r}' for r in recommendations)}
+
+Sumber:
+{chr(10).join(f'- {s.title}' for s in source_objs)}
+"""
+                col_dl, _ = st.columns([1, 3])
+                with col_dl:
+                    st.download_button(
+                        label=t("📥 Download Laporan (.txt)", "📥 Download Report (.txt)"),
+                        data=export_text,
+                        file_name=f"hoax_verification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                    )
 
                 st.success(t("✅ Verifikasi selesai! JERNIH selalu transparan dengan sumber data.", "✅ Verification complete! JERNIH is always transparent with data sources."))
 
@@ -251,17 +477,23 @@ def render_action():
                 agent = ActionPlanAgent()
                 result = agent.generate(problem, rag, lang=get_lang())
 
-                st.markdown(f"""
-                <div class="glass-card" style="padding: 1.5rem; margin: 1rem 0;">
-                    <div style="white-space: pre-wrap; color: rgba(255,255,255,0.8); line-height: 1.7;">{result}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown("""<div class="glass-card" style="padding: 1.5rem; margin: 1rem 0;">""", unsafe_allow_html=True)
+                st.markdown(result)
+                st.markdown("</div>", unsafe_allow_html=True)
 
                 if rag.sources:
                     render_sources_inline(rag.sources, label=t("sumber kebijakan yang mendasari rencana ini", "policy sources underlying this plan"))
                     render_sources_expander(rag.sources, [rag.context] if rag.context else [])
 
-                st.success(t("✅ Rencana aksi siap! JERNIH selalu mendasari rekomendasi dengan sumber resmi.", "✅ Action plan ready! JERNIH always bases recommendations on official sources."))
+                st.success(t("🚀 Rencana aksi siap! JERNIH selalu mendasari rekomendasi dengan sumber resmi.", "🚀 Action plan ready! JERNIH always bases recommendations on official sources."))
+
+                st.download_button(
+                    label=t("📥 Download Rencana Aksi (.txt)", "📥 Download Action Plan (.txt)"),
+                    data=result,
+                    file_name=f"action_plan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                )
 
 
 def render_policy():
@@ -300,12 +532,10 @@ def render_policy():
             agent = PolicyAgent()
             result = agent.simulate(budget, target, duration, lang=get_lang())
 
-            st.markdown(f"""
-            <div class="glass-card" style="padding: 1.5rem; margin: 1rem 0;">
-                <h3 style="color: rgba(255,255,255,0.9); margin: 0 0 1rem 0;">📈 {t('Hasil Simulasi', 'Simulation Result')}</h3>
-                <div style="white-space: pre-wrap; color: rgba(255,255,255,0.8); line-height: 1.7;">{result}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class="glass-card" style="padding: 1.5rem; margin: 1rem 0;">
+                <h3 style="color: rgba(255,255,255,0.9); margin: 0 0 1rem 0;">📈 {t('Hasil Simulasi', 'Simulation Result')}</h3>""", unsafe_allow_html=True)
+            st.markdown(result)
+            st.markdown("</div>", unsafe_allow_html=True)
 
             st.markdown(f"""
             <div class="glass-card" style="padding: 1rem; margin-top: 1rem;">

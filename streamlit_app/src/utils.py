@@ -409,6 +409,106 @@ CSS = """
         animation: fadeIn 0.5s ease forwards;
     }
 
+    /* ── Hoax Checker - Score Gauge ── */
+    .gauge-container {
+        display: flex; justify-content: center; align-items: center;
+        position: relative; width: 160px; height: 160px; margin: 0 auto;
+    }
+    .gauge-svg { transform: rotate(-90deg); }
+    .gauge-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+    .gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s ease; }
+    .gauge-center {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        text-align: center;
+    }
+    .gauge-center .score { font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1; }
+    .gauge-center .label { font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Verdict Card ── */
+    .verdict-card {
+        border-radius: 20px; padding: 1.5rem;
+        backdrop-filter: blur(20px);
+        position: relative; overflow: hidden;
+        animation: fadeIn 0.6s ease;
+    }
+    .verdict-card::before {
+        content: ''; position: absolute; inset: 0;
+        border-radius: 20px; padding: 2px;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude;
+        pointer-events: none;
+    }
+    .verdict-true {
+        background: rgba(46,213,115,0.08);
+    }
+    .verdict-true::before { background: linear-gradient(135deg, #2ed573, #7bed9f); }
+    .verdict-misleading {
+        background: rgba(255,165,2,0.08);
+    }
+    .verdict-misleading::before { background: linear-gradient(135deg, #ffa502, #ffbe76); }
+    .verdict-hoax {
+        background: rgba(255,71,87,0.08);
+    }
+    .verdict-hoax::before { background: linear-gradient(135deg, #ff4757, #ff6b81); }
+
+    .verdict-icon { font-size: 1.8rem; }
+    .verdict-label { font-size: 1.4rem; font-weight: 700; }
+    .verdict-sub { font-size: 0.8rem; opacity: 0.6; margin-top: 0.3rem; }
+    .verdict-true .verdict-label { color: #2ed573; }
+    .verdict-misleading .verdict-label { color: #ffa502; }
+    .verdict-hoax .verdict-label { color: #ff4757; }
+
+    /* ── Indicator Tag ── */
+    .indicator-tag {
+        display: inline-block;
+        background: rgba(255,71,87,0.08);
+        border: 1px solid rgba(255,71,87,0.2);
+        color: #ff6b81;
+        padding: 0.25rem 0.7rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        margin: 0.2rem;
+        white-space: nowrap;
+    }
+    .indicator-tag-safe {
+        background: rgba(46,213,115,0.08);
+        border-color: rgba(46,213,115,0.2);
+        color: #7bed9f;
+    }
+
+    /* ── Source Alignment Badge ── */
+    .alignment-support { color: #2ed573; }
+    .alignment-contradict { color: #ff4757; }
+    .alignment-neutral { color: #ffa502; }
+
+    /* ── Risk Badge ── */
+    .risk-badge {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.25rem 0.7rem; border-radius: 20px;
+        font-size: 0.75rem; font-weight: 600;
+    }
+    .risk-high { background: rgba(255,71,87,0.12); color: #ff4757; border: 1px solid rgba(255,71,87,0.2); }
+    .risk-medium { background: rgba(255,165,2,0.12); color: #ffa502; border: 1px solid rgba(255,165,2,0.2); }
+    .risk-low { background: rgba(46,213,115,0.12); color: #2ed573; border: 1px solid rgba(46,213,115,0.2); }
+
+    /* ── Section Header ── */
+    .hoax-section {
+        margin: 1.2rem 0 0.6rem 0;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        color: #E5E7EB; font-size: 1rem; font-weight: 600;
+    }
+
+    /* ── Animated Verification Pulse ── */
+    @keyframes verifyPulse {
+        0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.4); }
+        70% { box-shadow: 0 0 0 12px rgba(102,126,234,0); }
+        100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
+    }
+    .verify-animation {
+        animation: verifyPulse 1.5s ease-out;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
         .main-header h1 { font-size: 2.5rem; }

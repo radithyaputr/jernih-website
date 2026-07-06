@@ -1,18 +1,33 @@
 import os
-import streamlit as st
+import sys
 
 VERSION = "2.0.0"
 APP_NAME = "JERNIH OS"
 TAGLINE = "AI Civic Operating System — Informasi yang Terang, Bukan yang Bising"
 
-OPENROUTER_KEY = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "")
+def _get_secret(key: str) -> str:
+    val = os.environ.get(key, "")
+    if val:
+        return val
+    try:
+        import streamlit as st
+        return st.secrets.get(key, "")
+    except Exception:
+        return ""
+
+OPENROUTER_KEY = _get_secret("OPENAI_API_KEY")
+GEMINI_API_KEY = _get_secret("GEMINI_API_KEY")
 HAS_AI_API = bool(OPENROUTER_KEY)
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-AI_MODEL = "openai/gpt-4o-mini"
-AI_TIMEOUT = 15.0
-AI_MAX_TOKENS = 2000
+
+AI_MODEL = "google/gemini-2.0-flash-exp:free"
+AI_VISION_MODEL = "google/gemini-2.0-flash-exp:free"
+
+AI_TIMEOUT = 45.0
+AI_MAX_TOKENS = 2048
 AI_TEMPERATURE = 0.4
-AI_RETRY_MAX = 2
+AI_RETRY_MAX = 3
 
 SITE_URL = "https://jernih.app"
 SITE_TITLE = "JERNIH OS"

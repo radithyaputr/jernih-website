@@ -1,7 +1,6 @@
 import json
 import re
 import time
-import base64
 import httpx
 from src.config import (
     OPENROUTER_KEY, HAS_AI_API, OPENROUTER_URL, AI_MODEL,
@@ -62,13 +61,16 @@ def _call_api(headers: dict, payload: dict) -> str | None:
         try:
             with httpx.Client(timeout=AI_TIMEOUT) as http:
                 resp = http.post(OPENROUTER_URL, headers=headers, json=payload)
-            if resp.status_code in (401, 403, 429):
+            if resp.status_code in (401, 403):
                 return None
+            if resp.status_code == 429:
+                time.sleep(3)
+                continue
             if resp.status_code != 200:
                 return None
             data = resp.json()
             raw = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if raw.strip():
+            if raw and raw.strip():
                 return raw
             return None
         except httpx.TimeoutException:
