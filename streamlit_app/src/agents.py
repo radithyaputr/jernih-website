@@ -168,7 +168,7 @@ def _get_groq_key() -> str:
 
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama3-70b-8192"
+GROQ_MODELS = ["llama-3.1-8b-instant", "llama3-70b-8192", "mixtral-8x7b-32768"]
 
 
 def _call_groq(system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 1500) -> str | None:
@@ -179,33 +179,34 @@ def _call_groq(system_prompt: str, user_message: str, temperature: float = 0.7, 
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    for attempt in range(3):
-        try:
-            with httpx.Client(timeout=30.0) as http:
-                resp = http.post(GROQ_URL, headers=headers, json=payload)
-            if resp.status_code == 200:
-                raw = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-                if raw and raw.strip():
-                    return raw.strip()
-            elif resp.status_code == 429:
-                time.sleep(5)
-                continue
-            else:
+    for model in GROQ_MODELS:
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        for attempt in range(2):
+            try:
+                with httpx.Client(timeout=30.0) as http:
+                    resp = http.post(GROQ_URL, headers=headers, json=payload)
+                if resp.status_code == 200:
+                    raw = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if raw and raw.strip():
+                        return raw.strip()
+                elif resp.status_code == 429:
+                    time.sleep(3)
+                    continue
+                else:
+                    break
+            except Exception:
+                if attempt < 1:
+                    time.sleep(3)
+                    continue
                 break
-        except Exception:
-            if attempt < 2:
-                time.sleep(3)
-                continue
-            break
     return None
 
 
