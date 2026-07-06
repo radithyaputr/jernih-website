@@ -37,6 +37,13 @@ def init_session():
         st.session_state.language = "id"
 
 
+def _check_api_status():
+    from src.agents import _get_api_key
+    key = _get_api_key()
+    if key:
+        return f"🟢 AI · {key[:8]}..."
+    return "🔴 AI · Key not found"
+
 def render_sidebar():
     with st.sidebar:
         st.markdown("""
@@ -86,7 +93,12 @@ def render_sidebar():
             st.session_state.language = new_lang
             st.rerun()
 
-        st.markdown(f"<p style='text-align: center; color: rgba(255,255,255,0.2); font-size: 0.7rem; margin-top: 2rem;'>v2.0.0 | LKS 2026</p>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style='text-align: center; margin-top: 2rem;'>
+            <p style='color: rgba(255,255,255,0.3); font-size: 0.65rem; margin: 0 0 0.3rem 0;'>{_check_api_status()}</p>
+            <p style='color: rgba(255,255,255,0.2); font-size: 0.7rem; margin: 0;'>v2.0.0 | LKS 2026</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def render_home():

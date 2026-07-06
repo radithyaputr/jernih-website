@@ -5,17 +5,23 @@ VERSION = "2.0.0"
 APP_NAME = "JERNIH OS"
 TAGLINE = "AI Civic Operating System — Informasi yang Terang, Bukan yang Bising"
 
-def _get_secret(key: str) -> str:
-    val = os.environ.get(key, "")
-    if val:
-        return val
+def _get_secret(primary: str, *fallbacks: str) -> str:
+    for key in (primary, *fallbacks):
+        val = os.environ.get(key, "")
+        if val:
+            return val
     try:
         import streamlit as st
-        return st.secrets[key]
+        for key in (primary, *fallbacks):
+            try:
+                return st.secrets[key]
+            except Exception:
+                continue
     except Exception:
-        return ""
+        pass
+    return ""
 
-OPENROUTER_KEY = _get_secret("OPENAI_API_KEY")
+OPENROUTER_KEY = _get_secret("OPENAI_API_KEY", "OPENROUTER_KEY", "OPENROUTER_API_KEY")
 GEMINI_API_KEY = _get_secret("GEMINI_API_KEY")
 HAS_AI_API = bool(OPENROUTER_KEY)
 

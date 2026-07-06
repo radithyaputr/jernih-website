@@ -128,13 +128,17 @@ JANGAN pernah kembalikan JSON untuk pertanyaan percakapan biasa - hanya kembalik
 
 
 def _get_api_key() -> str:
-    env_key = os.environ.get("OPENAI_API_KEY", "")
-    if env_key:
-        return env_key
-    try:
-        return st.secrets["OPENAI_API_KEY"]
-    except Exception:
-        return os.environ.get("OPENAI_API_KEY", "")
+    possible_keys = ["OPENAI_API_KEY", "OPENROUTER_KEY", "OPENROUTER_API_KEY"]
+    for k in possible_keys:
+        v = os.environ.get(k, "")
+        if v:
+            return v
+    for k in possible_keys:
+        try:
+            return st.secrets[k]
+        except Exception:
+            continue
+    return ""
 
 def _get_gemini_key() -> str:
     env_key = os.environ.get("GEMINI_API_KEY", "")
