@@ -38,11 +38,17 @@ def init_session():
 
 
 def _check_api_status():
-    from src.agents import _get_api_key
+    from src.agents import _get_api_key, _get_groq_key
     key = _get_api_key()
-    if key:
-        return f"🟢 AI · {key[:8]}..."
-    return "🔴 AI · Key not found"
+    groq = _get_groq_key()
+    parts = []
+    if groq:
+        parts.append(f"🟢 Groq · {groq[:8]}...")
+    elif key:
+        parts.append(f"🟡 OR · {key[:8]}...")
+    else:
+        parts.append("🔴 No API key")
+    return " | ".join(parts)
 
 def render_sidebar():
     with st.sidebar:
