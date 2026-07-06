@@ -73,13 +73,19 @@ def _cached_call_llm(system_prompt: str, user_message: str, temperature: float =
     if key in _RESPONSE_CACHE:
         return _RESPONSE_CACHE[key]
 
-    # 1. Try Gemini
+    # 1. Try Groq (free, generous rate limits, no shared-IP rate limits)
+    groq_result = _call_groq(system_prompt, user_message, temperature, max_tokens)
+    if groq_result:
+        _RESPONSE_CACHE[key] = groq_result
+        return groq_result
+
+    # 2. Try Gemini
     gemini_result = _call_gemini(system_prompt, user_message, temperature, max_tokens)
     if gemini_result:
         _RESPONSE_CACHE[key] = gemini_result
         return gemini_result
 
-    # 2. OpenRouter — Nemotron (tried & tested, only working free model)
+    # 3. OpenRouter — Nemotron (tried & tested, only working free model)
     api_key = _get_api_key()
     if not api_key:
         return None
@@ -148,6 +154,59 @@ def _get_gemini_key() -> str:
         return st.secrets["GEMINI_API_KEY"]
     except Exception:
         return ""
+
+def _get_groq_key() -> str:
+    for k in ("GROQ_API_KEY",):
+        v = os.environ.get(k, "")
+        if v:
+            return v
+        try:
+            return st.secrets[k]
+        except Exception:
+            continue
+    return ""
+
+
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama3-70b-8192"
+
+
+def _call_groq(system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 1500) -> str | None:
+    key = _get_groq_key()
+    if not key:
+        return None
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    for attempt in range(3):
+        try:
+            with httpx.Client(timeout=30.0) as http:
+                resp = http.post(GROQ_URL, headers=headers, json=payload)
+            if resp.status_code == 200:
+                raw = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                if raw and raw.strip():
+                    return raw.strip()
+            elif resp.status_code == 429:
+                time.sleep(5)
+                continue
+            else:
+                break
+        except Exception:
+            if attempt < 2:
+                time.sleep(3)
+                continue
+            break
+    return None
 
 
 def _get_client():
@@ -371,9 +430,17 @@ GUIDELINES:
         else:
             user_msg = f"{context_block}\n\nQuestion: {query}\n\n{sources_block}"
 
-        full_prompt = f"{system_prompt}\n\n{user_msg}"
+        # 1. Try Groq (free, generous rate limits, OpenAI-compatible)
+        groq_text = _call_groq(system_prompt, user_msg, temperature=0.7, max_tokens=1500)
+        if groq_text:
+            return CopilotResponse(
+                answer=groq_text,
+                sources=rag_result.sources,
+                confidence=rag_result.confidence or 75.0,
+                source_texts=[rag_result.context] if rag_result.context else [],
+            )
 
-        # 1. Try Gemini API directly (Google API, may have reset quota)
+        # 2. Try Gemini API directly (Google API, may have reset quota)
         gemini_text = _call_gemini(system_prompt, user_msg, temperature=0.7, max_tokens=1500)
         if gemini_text:
             return CopilotResponse(
@@ -383,7 +450,7 @@ GUIDELINES:
                 source_texts=[rag_result.context] if rag_result.context else [],
             )
 
-        # 2. Try OpenRouter (Nemotron + fallbacks)
+        # 3. Try OpenRouter (Nemotron + fallbacks)
         api_key = _get_api_key()
         if not api_key:
             fallback = self._generate_fallback_answer(query, lang)
