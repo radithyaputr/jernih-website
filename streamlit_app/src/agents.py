@@ -351,7 +351,9 @@ PEMBARUAN DATA INDONESIA 2024-2026:
 - Menteri: Kabinet Merah Putih.
 - Program unggulan: Makan Bergizi Gratis, Program 3 Juta Rumah, Hilirisasi, Danantara.
 - Gubernur Jakarta: Pramono Anung. Gubernur Jawa Barat: Dedi Mulyadi.
-- Ibu Kota Nusantara (IKN) di Kaltim sedang dibangun sebagai ibu kota baru."""
+- Ibu Kota Nusantara (IKN) di Kaltim sedang dibangun sebagai ibu kota baru.
+
+INSTRUKSI KHUSUS: Jika ada [WEB SEARCH RESULTS] di pertanyaan, WAJIB gunakan itu sebagai jawaban. Abaikan semua pengetahuan lama Anda. Hasil web adalah fakta terkini."""
         self.system_prompt_en = SYSTEM_PROMPT_CORE_EN + """
 
 You are the AI Civic Copilot of the JERNIH platform. Your personality: friendly, helpful, and professional.
@@ -371,7 +373,9 @@ INDONESIA UPDATE 2024-2026:
 - Cabinet: Kabinet Merah Putih.
 - Key programs: Free Nutritious Meals, 3 Million Homes Program, Downstreaming, Danantara.
 - Jakarta Governor: Pramono Anung. West Java Governor: Dedi Mulyadi.
-- Nusantara Capital (IKN) in East Kalimantan is under construction as the new capital."""
+- Nusantara Capital (IKN) in East Kalimantan is under construction as the new capital.
+
+IMPORTANT: If [WEB SEARCH RESULTS] is present in the question, USE IT as your answer. Ignore all outdated knowledge. Web results are current facts."""
 
     def get_system_prompt(self, lang: str = "id") -> str:
         return self.system_prompt_id if lang == "id" else self.system_prompt_en
@@ -473,14 +477,14 @@ INDONESIA UPDATE 2024-2026:
         # — Web search untuk info terkini —
         web_results = web_search(query)
         if web_results:
-            web_section = f"\n\n--- HASIL PENCARIAN WEB ---\n{web_results}\n---"
+            web_section = f"\n\n[WEB SEARCH RESULTS - HARUS DIPAKAI]\n{web_results}\n[/WEB SEARCH RESULTS]"
         else:
             web_section = ""
 
         if lang == "id":
-            user_msg = f"{context_block}\n\nPertanyaan: {query}\n\n{sources_block}{web_section}"
+            user_msg = f"{web_section}\n\n{context_block}\n\nPertanyaan: {query}\n\n{sources_block}"
         else:
-            user_msg = f"{context_block}\n\nQuestion: {query}\n\n{sources_block}{web_section}"
+            user_msg = f"{web_section}\n\n{context_block}\n\nQuestion: {query}\n\n{sources_block}"
 
         # 1. Try Groq (free, generous rate limits, OpenAI-compatible)
         groq_text = _call_groq(system_prompt, user_msg, temperature=0.7, max_tokens=1500)
