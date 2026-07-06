@@ -609,7 +609,50 @@ Current year is 2026. Answer using DATA ABOVE, not your old knowledge."""
                 "- 📝 Document procedures"
             )
 
+    def _answer_direct(self, query: str, lang: str) -> str | None:
+        q = query.lower().strip()
+        now = datetime.now()
+        days_id = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+        days_en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        today_idx = now.weekday()
+        months_id = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+        months_en = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+        if lang == "id":
+            if q in ("hari ini hari apa", "hari apa sekarang", "sekarang hari apa", "tanggal berapa hari ini"):
+                return f"Hari ini {days_id[today_idx]}, {now.day} {months_id[now.month-1]} {now.year}."
+            if q in ("besok hari apa", "hari apa besok", "tanggal berapa besok"):
+                from datetime import timedelta
+                tom = now + timedelta(days=1)
+                return f"Besok {days_id[tom.weekday()]}, {tom.day} {months_id[tom.month-1]} {tom.year}."
+            if q in ("kemarin hari apa", "hari apa kemarin"):
+                from datetime import timedelta
+                yes = now - timedelta(days=1)
+                return f"Kemarin {days_id[yes.weekday()]}, {yes.day} {months_id[yes.month-1]} {yes.year}."
+            if "jam berapa" in q:
+                return f"Sekarang jam {now.strftime('%H:%M')} WIB."
+        else:
+            if q in ("what day is today", "what is today", "what date is today"):
+                return f"Today is {days_en[today_idx]}, {months_en[now.month-1]} {now.day}, {now.year}."
+            if q in ("what day is tomorrow", "what is tomorrow"):
+                from datetime import timedelta
+                tom = now + timedelta(days=1)
+                return f"Tomorrow is {days_en[tom.weekday()]}, {months_en[tom.month-1]} {tom.day}, {tom.year}."
+            if "what time" in q:
+                return f"The time is {now.strftime('%H:%M')}."
+        return None
+
     def ask(self, query: str, rag_result: RAGResult, lang: str = "id", history: list | None = None) -> CopilotResponse:
+        # — Jawab langsung tanpa AI untuk pertanyaan tanggal/waktu —
+        direct = self._answer_direct(query, lang)
+        if direct:
+            return CopilotResponse(
+                answer=direct,
+                sources=rag_result.sources,
+                confidence=99.0,
+                source_texts=[rag_result.context] if rag_result.context else [],
+            )
+
         system_prompt = self.get_system_prompt(lang)
         context_block = _format_context(rag_result)
         sources_block = _format_sources(rag_result.sources)
