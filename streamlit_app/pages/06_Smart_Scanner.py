@@ -52,8 +52,8 @@ import subprocess
 
 import shutil
 
-TESSERACT_PATH = shutil.which("tesseract") or ""
-TESSERACT_AVAILABLE = bool(TESSERACT_PATH)
+TESSERACT_PATH = shutil.which("tesseract") or "/usr/bin/tesseract"
+TESSERACT_AVAILABLE = bool(shutil.which("tesseract")) or os.path.exists("/usr/bin/tesseract")
 
 
 # ── OCR: Local Tesseract first, then OpenRouter fallback ──
