@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import time
 import hashlib
 import streamlit as st
 import httpx
@@ -20,7 +21,6 @@ def _cache_key(system: str, user: str) -> str:
     return hashlib.md5(raw.encode()).hexdigest()
 
 def _call_gemini(system_prompt: str, user_message: str, temperature: float = 0.3, max_tokens: int = 800) -> str | None:
-    import time
     gemini_key = _get_gemini_key()
     if not gemini_key:
         return None
@@ -69,7 +69,6 @@ def _or_request(model: str, api_key: str, headers: dict, payload: dict) -> tuple
 
 
 def _cached_call_llm(system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 1500) -> str | None:
-    import time
     key = _cache_key(system_prompt, user_message)
     if key in _RESPONSE_CACHE:
         return _RESPONSE_CACHE[key]
