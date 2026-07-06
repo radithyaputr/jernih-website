@@ -311,64 +311,109 @@ def _format_sources(sources: list[Source]) -> str:
     return "\n".join(lines)
 
 
-def _build_search_queries(query: str) -> list[str]:
-    q = query.lower()
-    queries = [query]
-    if "presiden" in q or "president" in q:
-        if "amerika" in q or "as" in q or "united states" in q:
-            queries.append("current president of the United States 2025 2026")
-        elif "indonesia" in q:
-            queries.append("Presiden Indonesia 2025 2026 Prabowo Subianto")
-        elif "rusia" in q or "russia" in q:
-            queries.append("President of Russia 2025 2026")
-        elif "prancis" in q or "france" in q:
-            queries.append("President of France 2025 2026")
-        else:
-            queries.append(f"current president of {query.replace('presiden','').replace('president','').strip()} 2025")
-    if "gubernur" in q:
-        queries.append(f"{query} 2025 2026")
-    return queries
+WIKI_API = "https://en.wikipedia.org/api/rest_v1/page/summary"
+
+
+def _wiki_summary(title: str) -> str | None:
+    """Get Wikipedia summary for a page title."""
+    try:
+        import httpx
+        resp = httpx.get(f"{WIKI_API}/{title}", timeout=10, headers={"User-Agent": "JERNIH/1.0"})
+        if resp.status_code == 200:
+            data = resp.json()
+            extract = data.get("extract", "")
+            url = data.get("content_urls", {}).get("desktop", {}).get("page", "")
+            if extract:
+                return f"{extract[:800]}\nSumber: Wikipedia - {url}" if url else extract[:800]
+    except Exception:
+        pass
+    return None
+
+
+def _wiki_search(query: str) -> str | None:
+    """Search Wikipedia and return first result summary."""
+    try:
+        import httpx
+        resp = httpx.get(
+            "https://en.wikipedia.org/w/api.php",
+            params={"action": "opensearch", "search": query, "limit": "3", "format": "json"},
+            timeout=10,
+            headers={"User-Agent": "JERNIH/1.0"},
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            titles = data[1] if len(data) > 1 else []
+            if titles:
+                return _wiki_summary(titles[0].replace(" ", "_"))
+    except Exception:
+        pass
+    return None
+
+
+# Mapping pertanyaan umum → artikel Wikipedia yang tepat
+WIKI_TOPICS = {
+    "presiden amerika": "President_of_the_United_States",
+    "president of the united states": "President_of_the_United_States",
+    "president of america": "President_of_the_United_States",
+    "presiden indonesia": "President_of_Indonesia",
+    "president of indonesia": "President_of_Indonesia",
+    "presiden rusia": "President_of_Russia",
+    "president of russia": "President_of_Russia",
+    "presiden prancis": "President_of_France",
+    "president of france": "President_of_France",
+    "presiden jerman": "President_of_Germany",
+    "president of germany": "President_of_Germany",
+    "presiden china": "President_of_China",
+    "president of china": "President_of_China",
+    "presiden jepang": "Prime_Minister_of_Japan",
+    "presiden singapura": "President_of_Singapore",
+    "presiden malaysia": "Prime_Minister_of_Malaysia",
+    "presiden iran": "President_of_Iran",
+    "presiden korea": "President_of_South_Korea",
+    "presiden australia": "Prime_Minister_of_Australia",
+    "gubernur jakarta": "Governor_of_Jakarta",
+    "gubernur jawa barat": "Governor_of_West_Java",
+    "gubernur jawa timur": "Governor_of_East_Java",
+    "gubernur jawa tengah": "Governor_of_Central_Java",
+    "ibu kota indonesia": "Capital_of_Indonesia",
+    "ibu kota nusantara": "Nusantara_(city)",
+}
 
 
 def web_search(query: str, max_results: int = 4) -> str:
-    """Search DuckDuckGo + Wikipedia for current info. Returns formatted string or empty."""
-    queries = _build_search_queries(query)
-    seen = set()
+    """Search Wikipedia + DuckDuckGo for current info. Returns formatted string or empty."""
+    q = query.lower().strip()
     parts = []
 
-    for q in queries:
+    # 1. Wikipedia langsung untuk topik spesifik
+    for keyword, article in WIKI_TOPICS.items():
+        if keyword in q:
+            result = _wiki_summary(article)
+            if result:
+                parts.append(result)
+            break
+
+    # 2. Wikipedia search untuk topik lain
+    if not parts:
+        wiki_search_term = q.replace("siapa", "").replace("sekarang", "").replace("saat ini", "").replace("?", "").replace("apa", "").strip()
+        if wiki_search_term:
+            result = _wiki_search(wiki_search_term)
+            if result:
+                parts.append(result)
+
+    # 3. Fallback DuckDuckGo kalau Wikipedia kosong
+    if not parts:
         try:
             from duckduckgo_search import DDGS
             with DDGS() as ddgs:
-                results = list(ddgs.text(q, max_results=max_results))
+                results = list(ddgs.text(query, max_results=3))
             for r in results:
                 title = r.get("title", "")
                 snippet = r.get("body", "")
                 link = r.get("href", "")
-                key = title[:50]
-                if key not in seen and snippet.strip():
-                    seen.add(key)
-                    parts.append(f"[{len(parts)+1}] {title}\n{snippet}\nSumber: {link}")
-                    if len(parts) >= 4:
-                        break
-        except Exception:
-            continue
-        if len(parts) >= 4:
-            break
-
-    # Fallback: Wikipedia untuk fakta presiden
-    if not parts and ("presiden" in query.lower() or "president" in query.lower()):
-        try:
-            import httpx
-            wiki_q = query.replace("siapa", "").replace("sekarang", "").replace("saat ini", "").strip()
-            wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={wiki_q}&format=json&srlimit=3"
-            resp = httpx.get(wiki_url, timeout=10)
-            data = resp.json()
-            for item in data.get("query", {}).get("search", [])[:2]:
-                title = item.get("title", "")
-                snippet = item.get("snippet", "").replace("<span class=\"searchmatch\">", "**").replace("</span>", "**")
-                if title and snippet:
-                    parts.append(f"[{len(parts)+1}] {title}\n{snippet}\nSumber: Wikipedia")
+                if snippet.strip():
+                    parts.append(f"{title}\n{snippet}\nSumber: {link}")
+                    break
         except Exception:
             pass
 
