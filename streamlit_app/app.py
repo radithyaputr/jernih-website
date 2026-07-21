@@ -53,12 +53,12 @@ def _check_api_status():
 def render_sidebar():
     with st.sidebar:
         st.markdown("""
-        <div style="text-align: center; padding: 1.2rem 0 0.5rem 0;">
-            <div style="background: linear-gradient(135deg, #667eea, #764ba2); width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem;">
-                <span style="font-size: 1.6rem;">🧠</span>
+        <div style="text-align: center; padding: 1rem 0 0.3rem 0;">
+            <div style="background: #1a1a24; width: 44px; height: 44px; border-radius: 10px; border: 1px solid #2a2a35; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+                <span style="font-size: 1.3rem;">🧠</span>
             </div>
-            <h2 style="margin: 0; color: #FFFFFF; font-family: 'Playfair Display', serif; font-style: italic; font-weight: 700; font-size: 1.6rem;">JERNIH.</h2>
-            <p style="color: rgba(255,255,255,0.4); font-size: 0.7rem; margin: 0.2rem 0 0 0; letter-spacing: 0.1em; text-transform: uppercase;">Informasi yang Terang</p>
+            <h2 style="margin: 0; color: #e8e8ed; font-family: 'Playfair Display', serif; font-style: italic; font-weight: 700; font-size: 1.4rem;">JERNIH.</h2>
+            <p style="color: #5a5a66; font-size: 0.65rem; margin: 0.15rem 0 0 0; letter-spacing: 0.08em; text-transform: uppercase;">Informasi yang Terang</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -103,8 +103,8 @@ def render_sidebar():
 
         st.markdown(f"""
         <div style='text-align: center; margin-top: 2rem;'>
-            <p style='color: rgba(255,255,255,0.3); font-size: 0.65rem; margin: 0 0 0.3rem 0;'>{_check_api_status()}</p>
-            <p style='color: rgba(255,255,255,0.2); font-size: 0.7rem; margin: 0;'>v2.0.0 | LKS 2026</p>
+            <p style='color: #3a3a48; font-size: 0.6rem; margin: 0 0 0.2rem 0;'>{_check_api_status()}</p>
+            <p style='color: #2a2a35; font-size: 0.65rem; margin: 0;'>v2.0.0 | LKS 2026</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -730,10 +730,10 @@ def main():
     pages.get(st.session_state.page, render_home)()
 
     st.markdown(f"""
-    <div style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.25); font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 3rem;">
+    <div style="text-align: center; padding: 2rem; color: #2a2a35; font-size: 0.7rem; border-top: 1px solid #1a1a24; margin-top: 3rem;">
         <p style="margin: 0; font-family: 'Playfair Display', serif; font-style: italic;">JERNIH.</p>
-        <p style="margin: 0.3rem 0 0 0; letter-spacing: 0.05em;">{t('Informasi yang Terang, Bukan yang Bising', 'Clear Information, Not Noise')}</p>
-        <p style="margin: 0.3rem 0 0 0; font-size: 0.65rem;">v2.0.0 — LKS 2026 AI Exhibition</p>
+        <p style="margin: 0.2rem 0 0 0; letter-spacing: 0.05em;">{t('Informasi yang Terang, Bukan yang Bising', 'Clear Information, Not Noise')}</p>
+        <p style="margin: 0.2rem 0 0 0; font-size: 0.6rem;">v2.0.0 — LKS 2026 AI Exhibition</p>
     </div>
     """, unsafe_allow_html=True)
 
