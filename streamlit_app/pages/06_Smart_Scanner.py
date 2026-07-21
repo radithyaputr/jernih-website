@@ -251,7 +251,7 @@ def render_page():
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
                 st.markdown("""
-                <div style="text-align: center; padding: 3rem 1rem; color: rgba(255,255,255,0.3);">
+                <div style="text-align: center; padding: 3rem 1rem; color: #5a5a66;">
                     <div style="font-size: 4rem; margin-bottom: 1rem;">📄</div>
                     <p style="font-size: 1.1rem;">Upload gambar untuk memulai</p>
                     <p style="font-size: 0.85rem;">Dukung format JPG, PNG, JPEG, BMP, WEBP</p>
@@ -262,11 +262,11 @@ def render_page():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("<h3 style='color: #667eea;'>📷 Gambar Asli</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #5b8def;'>📷 Gambar Asli</h3>", unsafe_allow_html=True)
         st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
 
     with col2:
-        st.markdown("<h3 style='color: #2ed573;'>📝 Hasil Ekstraksi Teks</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #34d399;'>📝 Hasil Ekstraksi Teks</h3>", unsafe_allow_html=True)
 
         scan_btn = st.button("🔍 Scan Text dari Gambar", type="primary", use_container_width=True)
 

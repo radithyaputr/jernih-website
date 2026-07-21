@@ -376,7 +376,7 @@ def render_sources_expander(sources: list, source_texts: list[str] = None):
 
 def render_confidence_bar(score: float):
     score = min(max(score, 0), 100)
-    color = "#2ed573" if score >= 70 else "#ffa502" if score >= 40 else "#ff4757"
+    color = "#34d399" if score >= 70 else "#fbbf24" if score >= 40 else "#f87171"
     st.markdown(f"""
     <div style="margin: 0.5rem 0;">
         <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 0.2rem;">

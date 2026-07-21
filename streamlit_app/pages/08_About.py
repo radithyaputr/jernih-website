@@ -20,23 +20,22 @@ TODAY = datetime.now().strftime("%d %B %Y")
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
-.glow-text {{ font-family: 'Playfair Display', serif; font-style: italic; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 3.5rem; font-weight: 700; text-align: center; margin: 0; }}
-.glow-sub {{ font-family: 'Inter', sans-serif; text-align: center; color: rgba(255,255,255,0.6); font-size: 1.1rem; margin-top: 0.3rem; font-weight: 300; letter-spacing: 0.05em; }}
-.feature-card {{ background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.5rem; transition: all 0.3s ease; height: 100%; }}
-.feature-card:hover {{ transform: translateY(-6px); border-color: rgba(102,126,234,0.3); box-shadow: 0 12px 40px rgba(102,126,234,0.15); }}
-.feature-icon {{ font-size: 2rem; margin-bottom: 0.5rem; display: block; }}
-.feature-title {{ color: #E5E7EB; font-size: 1rem; font-weight: 600; margin: 0 0 0.3rem 0; }}
-.feature-desc {{ color: rgba(255,255,255,0.5); font-size: 0.8rem; line-height: 1.5; margin: 0; }}
-.stat-box {{ background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.2rem; text-align: center; }}
-.stat-number {{ font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-.stat-label {{ color: rgba(255,255,255,0.5); font-size: 0.75rem; margin-top: 0.2rem; }}
-.arch-node {{ display: inline-block; padding: 0.5rem 1.2rem; border-radius: 30px; font-size: 0.8rem; font-weight: 500; margin: 0.2rem; }}
-.step-container {{ position: relative; padding-left: 2rem; margin: 0.8rem 0; }}
-.step-line {{ position: absolute; left: 0.5rem; top: 0.3rem; bottom: 0.3rem; width: 2px; background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 1px; }}
-.step-dot {{ position: absolute; left: 0.2rem; top: 0.3rem; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; color: white; font-weight: 700; }}
-.step-content {{ color: rgba(255,255,255,0.75); font-size: 0.85rem; }}
-.step-title {{ color: #E5E7EB; font-weight: 600; font-size: 0.95rem; }}
-.tech-pill {{ display: inline-block; padding: 0.3rem 0.9rem; border-radius: 20px; font-size: 0.75rem; background: rgba(102,126,234,0.12); border: 1px solid rgba(102,126,234,0.2); color: rgba(255,255,255,0.8); margin: 0.15rem; }}
+.glow-text {{ font-family: 'Playfair Display', serif; font-style: italic; color: #e8e8ed; font-size: 3rem; font-weight: 700; text-align: center; margin: 0; }}
+.glow-sub {{ font-family: 'Inter', sans-serif; text-align: center; color: #5a5a66; font-size: 1rem; margin-top: 0.3rem; font-weight: 300; letter-spacing: 0.05em; }}
+.feature-card {{ background: #111118; border: 1px solid #2a2a35; border-radius: 10px; padding: 1.2rem; height: 100%; }}
+.feature-icon {{ font-size: 1.6rem; margin-bottom: 0.4rem; display: block; }}
+.feature-title {{ color: #e8e8ed; font-size: 0.9rem; font-weight: 600; margin: 0 0 0.25rem 0; }}
+.feature-desc {{ color: #5a5a66; font-size: 0.75rem; line-height: 1.5; margin: 0; }}
+.stat-box {{ background: #111118; border: 1px solid #2a2a35; border-radius: 10px; padding: 1rem; text-align: center; }}
+.stat-number {{ font-size: 1.8rem; font-weight: 700; color: #5b8def; }}
+.stat-label {{ color: #5a5a66; font-size: 0.7rem; margin-top: 0.15rem; }}
+.arch-node {{ display: inline-block; padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.75rem; font-weight: 500; margin: 0.15rem; }}
+.step-container {{ position: relative; padding-left: 2rem; margin: 0.6rem 0; }}
+.step-line {{ position: absolute; left: 0.5rem; top: 0.3rem; bottom: 0.3rem; width: 2px; background: #2a2a35; border-radius: 1px; }}
+.step-dot {{ position: absolute; left: 0.2rem; top: 0.3rem; width: 1rem; height: 1rem; border-radius: 50%; background: #5b8def; display: flex; align-items: center; justify-content: center; font-size: 0.45rem; color: white; font-weight: 700; }}
+.step-content {{ color: #8a8a96; font-size: 0.8rem; }}
+.step-title {{ color: #e8e8ed; font-weight: 600; font-size: 0.9rem; }}
+.tech-pill {{ display: inline-block; padding: 0.25rem 0.7rem; border-radius: 6px; font-size: 0.7rem; background: #111118; border: 1px solid #2a2a35; color: #8a8a96; margin: 0.1rem; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -48,7 +47,7 @@ with col_h2:
         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🧠</div>
         <p class="glow-text">JERNIH.</p>
         <p class="glow-sub">Informasi yang Terang, Bukan yang Bising</p>
-        <p style="color: rgba(255,255,255,0.25); font-size: 0.75rem; margin-top: 0.3rem;">AI Civic Operating System — LKS 2026 AI Exhibition</p>
+        <p style="color: #3a3a48; font-size: 0.7rem; margin-top: 0.3rem;">AI Civic Operating System — LKS 2026 AI Exhibition</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -62,9 +61,9 @@ nodes = [
     "OpenRouter\nNemotron", "Smart\nScanner", "Hoax\nChecker", "Action\nPlan", "Policy\nSim",
     "Predictive\nMap", "Knowledge\nGraph"
 ]
-colors = ["#667eea", "#2ed573", "#ffa502", "#764ba2", "#1e90ff",
-          "#ff4757", "#a78bfa", "#2ed573", "#ffa502", "#1e90ff",
-          "#ff4757", "#764ba2"]
+colors = ["#5b8def", "#34d399", "#fbbf24", "#a78bfa", "#38bdf8",
+          "#f87171", "#a78bfa", "#34d399", "#fbbf24", "#38bdf8",
+          "#f87171", "#a78bfa"]
 sizes = [20, 14, 14, 18, 18, 18, 14, 14, 14, 14, 14, 14]
 
 edges = [
@@ -98,7 +97,7 @@ for idx, (s, t) in enumerate(edges):
     x1, y1, z1 = pos[t]
     edge_traces.append(go.Scatter3d(
         x=[x0, x1, None], y=[y0, y1, None], z=[z0, z1, None],
-        mode="lines", line=dict(width=2, color="rgba(102,126,234,0.35)"),
+        mode="lines", line=dict(width=2, color="rgba(91,141,239,0.25)"),
         hoverinfo="text", text=f"{edge_labels[idx]}" if idx < len(edge_labels) else "",
         showlegend=False,
     ))
@@ -111,8 +110,8 @@ node_trace = go.Scatter3d(
     text=nodes,
     textposition="middle center",
     hoverinfo="text",
-    marker=dict(size=sizes, color=colors, line=dict(width=1, color="rgba(255,255,255,0.2)")),
-    textfont=dict(size=9, color="#E5E7EB"),
+    marker=dict(size=sizes, color=colors, line=dict(width=1, color="rgba(10,10,15,0.6)")),
+    textfont=dict(size=9, color="#e8e8ed"),
     showlegend=False,
 )
 
@@ -134,12 +133,12 @@ fig.update_layout(dragmode="turntable")
 config = {"displayModeBar": False, "responsive": True}
 st.plotly_chart(fig, use_container_width=True, config=config)
 
-st.markdown("<p style='text-align: center; color: rgba(255,255,255,0.3); font-size: 0.7rem; margin-top: 0;'>🔄 Seret untuk memutar arsitektur 3D</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #3a3a48; font-size: 0.65rem; margin-top: 0;'>🔄 Seret untuk memutar arsitektur 3D</p>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Stats ──
-st.markdown("<h3 style='color: #E5E7EB; text-align: center; font-weight: 500;'>📊 Dampak JERNIH</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='color: #e8e8ed; text-align: center; font-weight: 500;'>📊 Dampak JERNIH</h3>", unsafe_allow_html=True)
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown("<div class='stat-box'><div class='stat-number'>8</div><div class='stat-label'>Fitur AI Terintegrasi</div></div>", unsafe_allow_html=True)
@@ -153,7 +152,7 @@ with c4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Fitur ──
-st.markdown("<h3 style='color: #E5E7EB; text-align: center; font-weight: 500;'>🚀 Fitur Unggulan</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='color: #e8e8ed; text-align: center; font-weight: 500;'>🚀 Fitur Unggulan</h3>", unsafe_allow_html=True)
 
 features = [
     ("🤖", "AI Civic Copilot", "Chatbot cerdas dengan Groq Llama 3.1 + fallback Gemini & OpenRouter. Jawab pertanyaan layanan publik, cek fakta, dan bantu warga."),
@@ -183,8 +182,8 @@ for i in range(0, len(features), 3):
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Alur ──
-st.markdown("<h3 style='color: #E5E7EB; text-align: center; font-weight: 500;'>⚡ Cara Kerja JERNIH</h3>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-bottom: 1.5rem;'>Bagaimana AI JERNIH memproses pertanyaan Anda</p>", unsafe_allow_html=True)
+st.markdown("<h3 style='color: #e8e8ed; text-align: center; font-weight: 500;'>⚡ Cara Kerja JERNIH</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #5a5a66; font-size: 0.75rem; margin-bottom: 1rem;'>Bagaimana AI JERNIH memproses pertanyaan Anda</p>", unsafe_allow_html=True)
 
 steps = [
     ("1", "Input", "Anda mengetik pertanyaan atau upload gambar"),
@@ -209,8 +208,8 @@ for num, title, desc in steps:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Tech Stack ──
-st.markdown("<h3 style='color: #E5E7EB; text-align: center; font-weight: 500;'>🛠️ Teknologi</h3>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-bottom: 1rem;'>Stack yang digunakan JERNIH</p>", unsafe_allow_html=True)
+st.markdown("<h3 style='color: #e8e8ed; text-align: center; font-weight: 500;'>🛠️ Teknologi</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #5a5a66; font-size: 0.75rem; margin-bottom: 0.8rem;'>Stack yang digunakan JERNIH</p>", unsafe_allow_html=True)
 
 techs = [
     "Streamlit", "Python", "Groq API", "Gemini API", "OpenRouter",
@@ -228,9 +227,9 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 
 # ── Footer ──
 st.markdown("""
-<div style="text-align: center; padding: 2rem; border-top: 1px solid rgba(255,255,255,0.06);">
-    <p style="color: rgba(255,255,255,0.2); font-size: 0.75rem; font-family: 'Playfair Display', serif; font-style: italic; margin: 0;">JERNIH.</p>
-    <p style="color: rgba(255,255,255,0.15); font-size: 0.65rem; margin: 0.3rem 0 0 0;">AI Civic Operating System — LKS 2026 AI Exhibition</p>
-    <p style="color: rgba(255,255,255,0.1); font-size: 0.6rem; margin: 0.2rem 0 0 0;">v2.0.0 | Dibangun dengan ❤️ untuk Indonesia</p>
+<div style="text-align: center; padding: 1.5rem; border-top: 1px solid #1a1a24;">
+    <p style="color: #3a3a48; font-size: 0.7rem; font-family: 'Playfair Display', serif; font-style: italic; margin: 0;">JERNIH.</p>
+    <p style="color: #2a2a35; font-size: 0.6rem; margin: 0.2rem 0 0 0;">AI Civic Operating System — LKS 2026 AI Exhibition</p>
+    <p style="color: #1a1a24; font-size: 0.55rem; margin: 0.15rem 0 0 0;">v2.0.0 | Dibangun dengan ❤️ untuk Indonesia</p>
 </div>
 """, unsafe_allow_html=True)

@@ -481,15 +481,15 @@ def render_hotspot_details(hotspots):
         trend_text = "Meningkat" if trend == "increasing" else "Menurun" if trend == "decreasing" else "Stabil"
 
         st.markdown(f"""
-        <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:1rem;margin-bottom:0.8rem;border-left:4px solid {'#ff4757' if is_high else '#ffa502'};">
+        <div style="background:#111118;border-radius:8px;padding:0.8rem;margin-bottom:0.6rem;border-left:3px solid {'#f87171' if is_high else '#fbbf24'};">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <strong style="color:white;font-size:1.1rem;">{hs.get("name", "-")}</strong>
-                <span style="color:{'#ff4757' if is_high else '#ffa502'};font-weight:bold;font-size:1.2rem;">{score}/100</span>
+                <span style="color:{'#f87171' if is_high else '#fbbf24'};font-weight:bold;font-size:1.2rem;">{score}/100</span>
             </div>
             <div style="color:#8892b0;font-size:0.85rem;margin-top:0.3rem;">
                 {trend_icon} Tren: {trend_text} &nbsp;|&nbsp; Level: {risk} &nbsp;|&nbsp; Terdampak: {hs.get("affected_estimate", "-")}
             </div>
-            <div style="color:#ccd6f6;font-size:0.9rem;margin-top:0.4rem;">{hs.get("reason", "")}</div>
+            <div style="color:#8a8a96;font-size:0.9rem;margin-top:0.4rem;">{hs.get("reason", "")}</div>
             <div style="margin-top:0.4rem;">
                 {''.join(f'<span style="background:rgba(100,255,218,0.1);color:#64ffda;border-radius:6px;padding:2px 10px;font-size:0.75rem;margin-right:4px;">{r}</span>' for r in hs.get("recommendations", [])[:2])}
             </div>
@@ -585,11 +585,11 @@ def render_page():
                     "<div style='color:#64ffda;font-weight:bold;font-size:1rem;'>{name}</div>"
                     "<div style='display:flex;justify-content:space-between;margin-top:6px;'>"
                     "<span style='color:#8892b0;'>Risk Level:</span>"
-                    "<span style='color:#ff4757;font-weight:bold;'>{risk_level}</span></div>"
+                    "<span style='color:#f87171;font-weight:bold;'>{risk_level}</span></div>"
                     "<div style='display:flex;justify-content:space-between;'>"
                     "<span style='color:#8892b0;'>Risk Score:</span>"
-                    "<span style='color:#ffa502;font-weight:bold;'>{risk_score}/100</span></div>"
-                    "<div style='color:#ccd6f6;font-size:0.85rem;margin-top:4px;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;'>{reason}</div>"
+                    "<span style='color:#fbbf24;font-weight:bold;'>{risk_score}/100</span></div>"
+                    "<div style='color:#8a8a96;font-size:0.8rem;margin-top:4px;border-top:1px solid #2a2a35;padding-top:4px;'>{reason}</div>"
                     "</div>"
                 ),
             }
@@ -615,14 +615,14 @@ def render_page():
         with m1:
             st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-value" style="color:#ff4757;">{total_high}</div>
+                <div class="metric-value" style="color:#f87171;">{total_high}</div>
                 <div class="metric-label">Zona Berisiko Tinggi</div>
             </div>
             """, unsafe_allow_html=True)
         with m2:
             st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-value" style="color:#ffa502;">{total_zones}</div>
+                <div class="metric-value" style="color:#fbbf24;">{total_zones}</div>
                 <div class="metric-label">Total Zona Terdeteksi</div>
             </div>
             """, unsafe_allow_html=True)
@@ -634,7 +634,7 @@ def render_page():
             </div>
             """, unsafe_allow_html=True)
         with m4:
-            conf_color = "#64ffda" if confidence >= 75 else "#ffa502" if confidence >= 50 else "#ff4757"
+            conf_color = "#34d399" if confidence >= 75 else "#fbbf24" if confidence >= 50 else "#f87171"
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-value" style="color:{conf_color};">{confidence}%</div>
@@ -647,11 +647,11 @@ def render_page():
             with st.expander("🧠 Analisis & Insight AI", expanded=True):
                 if summary:
                     st.markdown(f"**Ringkasan Prediksi {selected_region} ({timeframe} hari):**")
-                    st.markdown(f"<div style='background:rgba(100,255,218,0.05);border-radius:8px;padding:0.8rem;color:#ccd6f6;'>{summary}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:rgba(100,255,218,0.05);border-radius:8px;padding:0.8rem;color:#8a8a96;'>{summary}</div>", unsafe_allow_html=True)
 
                 if trend_analysis:
                     st.markdown("**Analisis Tren:**")
-                    st.markdown(f"<div style='background:rgba(255,165,2,0.05);border-radius:8px;padding:0.8rem;color:#ccd6f6;'>{trend_analysis}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:#111118;border-radius:8px;padding:0.6rem;color:#8a8a96;'>{trend_analysis}</div>", unsafe_allow_html=True)
 
                 if data_sources:
                     st.markdown("**Sumber Data:** " + ", ".join(f"`{s}`" for s in data_sources))
@@ -687,23 +687,23 @@ def render_page():
         <div style="color:#8892b0;font-size:0.85rem;">
             <div style="display:flex;justify-content:space-between;padding:4px 0;">
                 <span>Indikator</span>
-                <span style="color:#ccd6f6;">{meta.get("indicator", "-")}</span>
+                <span style="color:#8a8a96;">{meta.get("indicator", "-")}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:4px 0;">
                 <span>Satuan</span>
-                <span style="color:#ccd6f6;">{meta.get("unit", "-")}</span>
+                <span style="color:#8a8a96;">{meta.get("unit", "-")}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:4px 0;">
                 <span>Sumber Data</span>
-                <span style="color:#ccd6f6;font-size:0.75rem;">{meta.get("sources", "-")}</span>
+                <span style="color:#8a8a96;font-size:0.75rem;">{meta.get("sources", "-")}</span>
             </div>
-            <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(255,255,255,0.05);margin-top:4px;">
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #1a1a24;margin-top:4px;">
                 <span>Periode</span>
-                <span style="color:#ccd6f6;">{timeframe} hari</span>
+                <span style="color:#8a8a96;">{timeframe} hari</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:4px 0;">
                 <span>Sensitivitas</span>
-                <span style="color:#ccd6f6;">{sensitivity}/10</span>
+                <span style="color:#8a8a96;">{sensitivity}/10</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -715,24 +715,24 @@ def render_page():
         st.markdown("""
         <div style="font-size:0.85rem;">
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-                <div style="width:12px;height:12px;border-radius:50%;background:#ff4757;"></div>
-                <span style="color:#ccd6f6;">High Risk</span>
+                <div style="width:12px;height:12px;border-radius:50%;background:#f87171;"></div>
+                <span style="color:#8a8a96;">High Risk</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-                <div style="width:12px;height:12px;border-radius:50%;background:#ffa502;"></div>
-                <span style="color:#ccd6f6;">Medium Risk</span>
+                <div style="width:12px;height:12px;border-radius:50%;background:#fbbf24;"></div>
+                <span style="color:#8a8a96;">Medium Risk</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-                <div style="width:12px;height:12px;border-radius:50%;background:#2ed573;"></div>
-                <span style="color:#ccd6f6;">Low Risk / Affected Zone</span>
+                <div style="width:12px;height:12px;border-radius:50%;background:#34d399;"></div>
+                <span style="color:#8a8a96;">Low Risk / Affected Zone</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-                <div style="width:12px;height:12px;border-radius:2px;background:rgba(255,71,87,0.5);"></div>
-                <span style="color:#ccd6f6;">3D Column = Risk Elevation</span>
+                <div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.5);"></div>
+                <span style="color:#8a8a96;">3D Column = Risk Elevation</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-                <div style="width:12px;height:12px;border-radius:50%;background:rgba(255,165,2,0.3);"></div>
-                <span style="color:#ccd6f6;">Heatmap = Risk Density</span>
+                <div style="width:12px;height:12px;border-radius:50%;background:rgba(251,191,36,0.3);"></div>
+                <span style="color:#8a8a96;">Heatmap = Risk Density</span>
             </div>
         </div>
         """, unsafe_allow_html=True)

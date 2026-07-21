@@ -295,7 +295,7 @@ def render_hoax():
                     """, unsafe_allow_html=True)
 
                 with vcol2:
-                    gauge_color = "#2ed573" if confidence >= 70 else "#ffa502" if confidence >= 40 else "#ff4757"
+                    gauge_color = "#34d399" if confidence >= 70 else "#fbbf24" if confidence >= 40 else "#f87171"
                     circumference = 2 * 3.14159 * 62
                     offset = circumference - (confidence / 100) * circumference
                     st.markdown(f"""
@@ -415,7 +415,7 @@ def render_hoax():
                         fc_icon = {"benar": "✅", "salah": "❌", "tidak_terverifikasi": "❓",
                                    "true": "✅", "false": "❌", "unverified": "❓"}
                         st.markdown(f"""
-                        <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 0.7rem 1rem; margin: 0.4rem 0; border-left: 3px solid {'#2ed573' if fc_status in ('benar','true') else '#ff4757' if fc_status in ('salah','false') else '#ffa502'};">
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 0.7rem 1rem; margin: 0.4rem 0; border-left: 3px solid {'#34d399' if fc_status in ('benar','true') else '#f87171' if fc_status in ('salah','false') else '#fbbf24'};">
                             <div style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-bottom: 0.2rem;">{t('Klaim', 'Claim')}:</div>
                             <div style="color: #E5E7EB;">{fc_claim}</div>
                             <div style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin: 0.4rem 0 0.2rem 0;">{t('Fakta', 'Fact')}:</div>
@@ -635,18 +635,18 @@ def render_graph():
         node_labels = []
         node_colors = []
         color_map = {
-            "Hoaks": "#ff4757",
+            "Hoaks": "#f87171",
             "Misinformasi": "#ff6348",
-            "Kebijakan Salah Sasaran": "#ffa502",
-            "Kebijakan Tepat Sasaran": "#2ed573",
-            "Kesejahteraan Warga": "#2ed573",
-            "Informasi Akurat": "#667eea",
-            "Verifikasi AI": "#764ba2",
-            "Partisipasi Masyarakat": "#1e90ff",
-            "Kepercayaan Publik": "#1e90ff",
-            "Sumber Resmi": "#2ed573",
-            "AI Civic Copilot": "#667eea",
-            "Knowledge Graph": "#764ba2",
+            "Kebijakan Salah Sasaran": "#fbbf24",
+            "Kebijakan Tepat Sasaran": "#34d399",
+            "Kesejahteraan Warga": "#34d399",
+            "Informasi Akurat": "#5b8def",
+            "Verifikasi AI": "#a78bfa",
+            "Partisipasi Masyarakat": "#38bdf8",
+            "Kepercayaan Publik": "#38bdf8",
+            "Sumber Resmi": "#34d399",
+            "AI Civic Copilot": "#5b8def",
+            "Knowledge Graph": "#a78bfa",
         }
 
         for node in G.nodes():
@@ -654,7 +654,7 @@ def render_graph():
             node_x.append(x)
             node_y.append(y)
             node_labels.append(node)
-            node_colors.append(color_map.get(node, "#667eea"))
+            node_colors.append(color_map.get(node, "#5b8def"))
 
         node_trace = go.Scatter(
             x=node_x,
