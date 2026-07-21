@@ -17,3 +17,5 @@ next-env.d.ts
 streamlit_app/.streamlit/secrets.toml
 streamlit_app/data/chroma_db/
 *.sqlite3
+logos/
+~$*.docx
